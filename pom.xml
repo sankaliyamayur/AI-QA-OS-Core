@@ -29,6 +29,7 @@
         <module>ai-qa-os-observability</module>
         <module>ai-qa-os-integration</module>
         <module>ai-qa-os-data</module>
+        <module>ai-qa-os-dashboard</module>
     </modules>
 
     <properties>
