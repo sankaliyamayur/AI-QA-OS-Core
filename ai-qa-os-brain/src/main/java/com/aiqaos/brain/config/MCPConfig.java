@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.config;
+package com.aiqaos.brain.config;
 
 public class MCPConfig {
 }

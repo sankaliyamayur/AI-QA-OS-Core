@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.agent;
+package com.aiqaos.brain.agent;
 
 public interface AgentExecutor {
 }

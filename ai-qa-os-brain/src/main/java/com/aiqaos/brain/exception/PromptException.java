@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.exception;
+package com.aiqaos.brain.exception;
 
 public class PromptException extends RuntimeException {
     public PromptException(String message) {

@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.knowledge;
+package com.aiqaos.brain.knowledge;
 
 public interface KnowledgeRetriever {
 }

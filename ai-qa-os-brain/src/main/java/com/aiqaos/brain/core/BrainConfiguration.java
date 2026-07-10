@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.core;
+package com.aiqaos.brain.core;
 
 public class BrainConfiguration {
 }

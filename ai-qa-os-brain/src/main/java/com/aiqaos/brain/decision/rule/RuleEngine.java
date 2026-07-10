@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.decision.rule;
+package com.aiqaos.brain.decision.rule;
 
 public interface RuleEngine {
 }

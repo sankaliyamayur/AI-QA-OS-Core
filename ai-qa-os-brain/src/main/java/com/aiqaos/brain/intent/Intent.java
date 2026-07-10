@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.intent;
+package com.aiqaos.brain.intent;
 
 public class Intent {
 }

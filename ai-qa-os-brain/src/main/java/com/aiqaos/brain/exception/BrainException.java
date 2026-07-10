@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.exception;
+package com.aiqaos.brain.exception;
 
 public class BrainException extends RuntimeException {
     public BrainException(String message) {

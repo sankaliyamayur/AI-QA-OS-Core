@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain;
+package com.aiqaos.brain;
 
 public class QABrain {
 }

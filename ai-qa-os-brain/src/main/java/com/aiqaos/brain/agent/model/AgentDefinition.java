@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.agent.model;
+package com.aiqaos.brain.agent.model;
 
 public class AgentDefinition {
 }

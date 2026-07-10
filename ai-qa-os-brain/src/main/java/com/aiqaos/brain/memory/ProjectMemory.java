@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.memory;
+package com.aiqaos.brain.memory;
 
 public class ProjectMemory {
 }

@@ -1,4 +1,4 @@
-﻿package com.aiqaos.brain.decision;
+package com.aiqaos.brain.decision;
 
 public class DecisionResult {
 }
