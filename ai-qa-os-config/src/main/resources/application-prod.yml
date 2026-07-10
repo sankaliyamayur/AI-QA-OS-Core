@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://prod-db-host:5432/ai_qa_os_prod
+    username: postgres
+    password: 
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+aiqaos:
+  application:
+    environment: prod
+  security:
+    enabled: true
+  features:
+    flags:
+      mcp-integration: true
+      ai-brain: true
+      realtime-logging: true

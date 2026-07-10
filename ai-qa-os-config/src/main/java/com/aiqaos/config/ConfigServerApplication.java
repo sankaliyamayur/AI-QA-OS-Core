@@ -2,12 +2,13 @@ package com.aiqaos.config;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.config.server.EnableConfigServer;
+import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup;
 
 @SpringBootApplication
-@EnableConfigServer
 public class ConfigServerApplication {
     public static void main(String[] args) {
-        SpringApplication.run(ConfigServerApplication.class, args);
+        SpringApplication app = new SpringApplication(ConfigServerApplication.class);
+        app.setApplicationStartup(new BufferingApplicationStartup(2048));
+        app.run(args);
     }
 }

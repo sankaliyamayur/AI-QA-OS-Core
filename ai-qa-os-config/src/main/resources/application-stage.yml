@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://stage-db-host:5432/ai_qa_os_stage
+    username: postgres
+    password: ENC(stage-encrypted-password)
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+aiqaos:
+  application:
+    environment: stage
+  security:
+    enabled: true
+  features:
+    flags:
+      mcp-integration: true
+      ai-brain: true
+      realtime-logging: true

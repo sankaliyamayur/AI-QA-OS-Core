@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:aiqaosdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+aiqaos:
+  application:
+    environment: local
+  security:
+    enabled: false
+  features:
+    flags:
+      mcp-integration: true
+      ai-brain: true
+      realtime-logging: true
