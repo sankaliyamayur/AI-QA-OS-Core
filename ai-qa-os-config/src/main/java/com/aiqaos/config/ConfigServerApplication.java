@@ -1,4 +1,4 @@
-﻿package com.aiqaos.config;
+package com.aiqaos.config;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
