@@ -7,4 +7,5 @@ public interface LLMProvider {
     LLMResponse generate(LLMRequest request);
     String getProviderName();
     boolean isAvailable();
+    boolean supports(ProviderCapability capability);
 }

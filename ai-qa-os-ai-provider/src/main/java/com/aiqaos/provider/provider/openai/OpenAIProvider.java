@@ -8,6 +8,7 @@ import com.aiqaos.provider.model.TokenUsage;
 import com.aiqaos.security.secret.SecretManager;
 import org.springframework.stereotype.Component;
 
+import com.aiqaos.provider.contract.ProviderCapability;
 import java.util.function.Consumer;
 
 @Component
@@ -45,4 +46,15 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public boolean isAvailable() { return true; }
+
+    @Override
+    public boolean supports(ProviderCapability capability) {
+        return capability == ProviderCapability.CHAT ||
+               capability == ProviderCapability.CODE_GENERATION ||
+               capability == ProviderCapability.VISION ||
+               capability == ProviderCapability.IMAGE ||
+               capability == ProviderCapability.FUNCTION_CALLING ||
+               capability == ProviderCapability.STREAMING ||
+               capability == ProviderCapability.EMBEDDING;
+    }
 }

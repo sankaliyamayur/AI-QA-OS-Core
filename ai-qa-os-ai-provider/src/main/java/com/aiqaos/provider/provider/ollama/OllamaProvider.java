@@ -7,6 +7,7 @@ import com.aiqaos.provider.model.LLMResponse;
 import com.aiqaos.provider.model.TokenUsage;
 import org.springframework.stereotype.Component;
 
+import com.aiqaos.provider.contract.ProviderCapability;
 import java.util.function.Consumer;
 
 @Component
@@ -36,4 +37,10 @@ public class OllamaProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public boolean isAvailable() { return true; }
+
+    @Override
+    public boolean supports(ProviderCapability capability) {
+        return capability == ProviderCapability.CHAT ||
+               capability == ProviderCapability.CODE_GENERATION;
+    }
 }

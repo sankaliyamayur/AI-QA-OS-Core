@@ -8,6 +8,7 @@ import com.aiqaos.provider.model.TokenUsage;
 import com.aiqaos.security.secret.SecretManager;
 import org.springframework.stereotype.Component;
 
+import com.aiqaos.provider.contract.ProviderCapability;
 import java.util.function.Consumer;
 
 @Component
@@ -44,4 +45,11 @@ public class GeminiProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public boolean isAvailable() { return true; }
+
+    @Override
+    public boolean supports(ProviderCapability capability) {
+        return capability == ProviderCapability.CHAT ||
+               capability == ProviderCapability.VISION ||
+               capability == ProviderCapability.EMBEDDING;
+    }
 }
