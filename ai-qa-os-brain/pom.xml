@@ -40,10 +40,5 @@
             <artifactId>ai-qa-os-orchestration</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.aiqaos</groupId>
-            <artifactId>ai-qa-os-reporting</artifactId>
-            <version>${project.version}</version>
-        </dependency>
     </dependencies>
 </project>
