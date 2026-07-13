@@ -2,11 +2,8 @@ package com.aiqaos.memory.store;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 import java.util.Optional;
 import java.time.Duration;
-
-@Component
 public class RedisMemoryStore implements MemoryStore {
 
     @Autowired(required = false)

@@ -2,7 +2,7 @@ package com.aiqaos.observability.metrics;
 
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("observabilityExecutionMetricsCollector")
 public class ExecutionMetricsCollector {
 
     private final MetricsCollector collector;

@@ -2,7 +2,7 @@ package com.aiqaos.observability.metrics;
 
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("observabilityWorkflowMetricsCollector")
 public class WorkflowMetricsCollector {
 
     private final MetricsCollector collector;

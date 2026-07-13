@@ -2,12 +2,10 @@ package com.aiqaos.memory.store;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.stereotype.Component;
 import java.util.Optional;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-@Component
 public class CaffeineMemoryStore implements MemoryStore {
     private final Cache<String, Object> cache = Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.HOURS)

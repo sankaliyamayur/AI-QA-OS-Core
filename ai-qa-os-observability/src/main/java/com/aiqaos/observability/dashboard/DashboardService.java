@@ -3,7 +3,7 @@ package com.aiqaos.observability.dashboard;
 import org.springframework.stereotype.Service;
 import java.util.Map;
 
-@Service
+@Service("observabilityDashboardService")
 public class DashboardService {
 
     private final DashboardMetricProvider metricProvider;
