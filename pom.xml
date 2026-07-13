@@ -30,6 +30,7 @@
         <module>ai-qa-os-integration</module>
         <module>ai-qa-os-data</module>
         <module>ai-qa-os-dashboard</module>
+        <module>ai-qa-os-agents-runtime</module>
     </modules>
 
     <properties>
