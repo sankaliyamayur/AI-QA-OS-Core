@@ -1,0 +1,13 @@
+package com.aiqaos.gateway.event;
+
+public enum GatewayEventType {
+    REQUEST_RECEIVED,
+    REQUEST_ROUTED,
+    REQUEST_COMPLETED,
+    REQUEST_FAILED,
+    RATE_LIMIT_HIT,
+    AUTH_FAILED,
+    WEBHOOK_RECEIVED,
+    WEBSOCKET_CONNECTED,
+    WEBSOCKET_DISCONNECTED
+}
