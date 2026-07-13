@@ -7,6 +7,7 @@ import com.aiqaos.memory.model.MemoryMetadata;
 import com.aiqaos.memory.vector.VectorStoreClient;
 import org.springframework.stereotype.Service;
 
+import com.aiqaos.memory.embedding.EmbeddingCacheManager;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,13 +17,16 @@ public class MemoryIngestionService {
     private final DocumentChunker chunker;
     private final EmbeddingProvider embeddingProvider;
     private final VectorStoreClient vectorStoreClient;
+    private final EmbeddingCacheManager cacheManager;
 
     public MemoryIngestionService(DocumentChunker chunker,
                                   EmbeddingProvider embeddingProvider,
-                                  VectorStoreClient vectorStoreClient) {
+                                  VectorStoreClient vectorStoreClient,
+                                  EmbeddingCacheManager cacheManager) {
         this.chunker = chunker;
         this.embeddingProvider = embeddingProvider;
         this.vectorStoreClient = vectorStoreClient;
+        this.cacheManager = cacheManager;
     }
 
     public void ingest(String text, MemoryMetadata metadata, String collection) {
@@ -32,8 +36,13 @@ public class MemoryIngestionService {
             String chunk = chunks.get(i);
             String chunkId = UUID.randomUUID().toString();
             
-            // Generate vectors
-            float[] embedding = embeddingProvider.embed(chunk, EmbeddingModel.OPENAI_TEXT_EMBEDDING_3_SMALL);
+            // Check cache
+            String hash = cacheManager.computeHash(chunk);
+            float[] embedding = cacheManager.getCachedEmbedding(hash);
+            
+            if (embedding == null) {
+                embedding = embeddingProvider.embed(chunk, EmbeddingModel.OPENAI_TEXT_EMBEDDING_3_SMALL);
+            }
             
             // Adjust metadata chunk index values
             metadata.getAttributes().put("chunk_index", i);
