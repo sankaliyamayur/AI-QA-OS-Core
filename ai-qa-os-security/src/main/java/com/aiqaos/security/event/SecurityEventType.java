@@ -1,0 +1,16 @@
+package com.aiqaos.security.event;
+
+public enum SecurityEventType {
+    LOGIN_SUCCESS,
+    LOGIN_FAILED,
+    LOGOUT,
+    TOKEN_EXPIRED,
+    TOKEN_REFRESH,
+    TOOL_ALLOWED,
+    TOOL_DENIED,
+    SECRET_ACCESS,
+    PERMISSION_CHECK_PASSED,
+    PERMISSION_ESCALATION_ATTEMPT,
+    AGENT_PERMISSION_DENIED,
+    POLICY_EVALUATED
+}
