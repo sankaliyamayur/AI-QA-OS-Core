@@ -1,0 +1,6 @@
+gateway:
+  replicas: 3
+brain:
+  replicas: 3
+agentRuntime:
+  replicas: 5

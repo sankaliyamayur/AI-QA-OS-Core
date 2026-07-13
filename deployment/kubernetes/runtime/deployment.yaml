@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-qa-os-agents-runtime
+  namespace: ai-qa-os
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agents-runtime
+  template:
+    metadata:
+      labels:
+        app: agents-runtime
+    spec:
+      containers:
+      - name: agents-runtime
+        image: ghcr.io/company/ai-qa-os-agents-runtime:latest
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 25
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 35
+          periodSeconds: 20
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi

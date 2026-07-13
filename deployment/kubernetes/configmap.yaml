@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-qa-os-config
+  namespace: ai-qa-os
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  LOGGING_LEVEL_COM_AIQAOS: INFO
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: prometheus

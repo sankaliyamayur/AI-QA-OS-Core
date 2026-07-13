@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-qa-os
+description: A Helm chart for deploying the complete AI-QA-OS platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
