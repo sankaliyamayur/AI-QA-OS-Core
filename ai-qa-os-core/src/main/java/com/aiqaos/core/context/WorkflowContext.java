@@ -1,6 +1,7 @@
 package com.aiqaos.core.context;
 
 import com.aiqaos.core.contract.BaseContext;
+import com.aiqaos.core.enums.WorkflowStatus;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,6 +13,8 @@ public class WorkflowContext extends BaseContext {
     private Map<String, Object> sharedMemory = new HashMap<>();
     private int retryCount;
     private String state;
+    private WorkflowStatus status;
+    private AutonomousQAWorkflowState qaWorkflowState;
 
     public String getCurrentStep() { return currentStep; }
     public void setCurrentStep(String currentStep) { this.currentStep = currentStep; }
@@ -33,4 +36,10 @@ public class WorkflowContext extends BaseContext {
     
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+
+    public WorkflowStatus getStatus() { return status; }
+    public void setStatus(WorkflowStatus status) { this.status = status; }
+
+    public AutonomousQAWorkflowState getQaWorkflowState() { return qaWorkflowState; }
+    public void setQaWorkflowState(AutonomousQAWorkflowState qaWorkflowState) { this.qaWorkflowState = qaWorkflowState; }
 }
