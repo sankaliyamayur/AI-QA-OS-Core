@@ -9,15 +9,20 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>ai-qa-os-orchestration</artifactId>
+    <artifactId>ai-qa-os-healing</artifactId>
     <packaging>jar</packaging>
 
-    <name>ai-qa-os-orchestration</name>
+    <name>ai-qa-os-healing</name>
 
     <dependencies>
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-memory</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -31,18 +36,8 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.aiqaos</groupId>
-            <artifactId>ai-qa-os-learning</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.aiqaos</groupId>
-            <artifactId>ai-qa-os-healing</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

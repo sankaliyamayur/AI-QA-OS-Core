@@ -9,6 +9,7 @@ import com.aiqaos.core.model.BugAnalysisReport;
 import com.aiqaos.core.model.LearningFeedback;
 import com.aiqaos.core.model.QAExecutionReport;
 import com.aiqaos.core.model.LearningResult;
+import com.aiqaos.core.model.SelfHealingResult;
 import java.io.Serializable;
 
 public class AutonomousQAWorkflowState implements Serializable {
@@ -23,6 +24,7 @@ public class AutonomousQAWorkflowState implements Serializable {
     private LearningFeedback learningFeedback;
     private QAExecutionReport qaExecutionReport;
     private LearningResult learningResult;
+    private SelfHealingResult selfHealingResult;
 
     public AutonomousQAWorkflowState() {}
 
@@ -52,4 +54,7 @@ public class AutonomousQAWorkflowState implements Serializable {
 
     public LearningResult getLearningResult() { return learningResult; }
     public void setLearningResult(LearningResult learningResult) { this.learningResult = learningResult; }
+
+    public SelfHealingResult getSelfHealingResult() { return selfHealingResult; }
+    public void setSelfHealingResult(SelfHealingResult selfHealingResult) { this.selfHealingResult = selfHealingResult; }
 }

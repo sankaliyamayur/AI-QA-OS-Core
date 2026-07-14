@@ -7,6 +7,7 @@ import java.util.List;
 public class ExecutionResult {
     private String taskId;
     private String agentId;
+    private String executionId;
     private boolean success;
     private String outputData;
     private String errorMessage;
@@ -34,6 +35,9 @@ public class ExecutionResult {
 
     public String getAgentId() { return agentId; }
     public void setAgentId(String agentId) { this.agentId = agentId; }
+
+    public String getExecutionId() { return executionId; }
+    public void setExecutionId(String executionId) { this.executionId = executionId; }
 
     public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }

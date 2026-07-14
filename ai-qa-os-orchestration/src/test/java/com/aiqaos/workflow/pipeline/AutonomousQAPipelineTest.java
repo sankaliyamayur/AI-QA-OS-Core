@@ -7,6 +7,8 @@ import com.aiqaos.agent.impl.ExecutionEngineerAgent;
 import com.aiqaos.agent.impl.BugAnalyzerAgent;
 import com.aiqaos.agent.impl.ReportingAgent;
 import com.aiqaos.agent.impl.LearningAgent;
+import com.aiqaos.agent.impl.SelfHealingAgent;
+import com.aiqaos.core.model.GeneratedScriptSuite;
 import com.aiqaos.agent.registry.AgentRegistry;
 import com.aiqaos.agent.manager.AgentManagerImpl;
 import com.aiqaos.execution.engine.ExecutionEngineFactory;
@@ -52,6 +54,7 @@ public class AutonomousQAPipelineTest {
     private BugAnalysisStep bugAnalysisStep;
     private ReportingStep reportingStep;
     private LearningStep learningStep;
+    private SelfHealingStep selfHealingStep;
 
     private AutonomousQAPipelineOrchestrator orchestrator;
 
@@ -191,6 +194,19 @@ public class AutonomousQAPipelineTest {
         ReflectionTestUtils.setField(learningAgent, "promptEngine", promptEngine);
         ReflectionTestUtils.setField(learningAgent, "providerManager", learningProviderManager);
 
+        // Setup SelfHealingAgent mock register
+        String selfHealingJsonResponse = "{\n" +
+                "  \"healingAction\": \"LOCATOR_UPDATE\",\n" +
+                "  \"reason\": \"Test execution repair\",\n" +
+                "  \"confidence\": 0.95,\n" +
+                "  \"retryRequired\": true,\n" +
+                "  \"scriptRegenerationRequired\": false\n" +
+                "}";
+        LLMProviderManager selfHealingProviderManager = new StubLLMProviderManager(selfHealingJsonResponse);
+        SelfHealingAgent selfHealingAgent = new SelfHealingAgent();
+        ReflectionTestUtils.setField(selfHealingAgent, "promptEngine", promptEngine);
+        ReflectionTestUtils.setField(selfHealingAgent, "providerManager", selfHealingProviderManager);
+
         AgentRegistry registry = new AgentRegistry();
         registry.register(java.util.UUID.randomUUID(), agent);
         registry.register(java.util.UUID.randomUUID(), tcAgent);
@@ -199,43 +215,48 @@ public class AutonomousQAPipelineTest {
         registry.register(java.util.UUID.randomUUID(), bugAgent);
         registry.register(java.util.UUID.randomUUID(), reportingAgent);
         registry.register(java.util.UUID.randomUUID(), learningAgent);
+        registry.register(java.util.UUID.randomUUID(), selfHealingAgent);
 
         AgentManagerImpl agentManager = new AgentManagerImpl();
         ReflectionTestUtils.setField(agentManager, "agentRegistry", registry);
 
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        mapper.findAndRegisterModules();
+
         LLMResponseValidator responseValidator = new LLMResponseValidator();
-        ReflectionTestUtils.setField(responseValidator, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(responseValidator, "objectMapper", mapper);
 
         PlaywrightExecutionEngine playwrightEngine = new PlaywrightExecutionEngine();
         ExecutionEngineFactory engineFactory = new ExecutionEngineFactory(List.of(playwrightEngine));
 
         qaAnalysisStep = new QAAnalysisStep();
         ReflectionTestUtils.setField(qaAnalysisStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(qaAnalysisStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(qaAnalysisStep, "objectMapper", mapper);
 
         testCaseGenerationStep = new TestCaseGenerationStep();
         ReflectionTestUtils.setField(testCaseGenerationStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(testCaseGenerationStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(testCaseGenerationStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(testCaseGenerationStep, "responseValidator", responseValidator);
 
         scriptGenerationStep = new ScriptGenerationStep();
         ReflectionTestUtils.setField(scriptGenerationStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(scriptGenerationStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(scriptGenerationStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(scriptGenerationStep, "responseValidator", responseValidator);
 
         executionStep = new ExecutionStep();
         ReflectionTestUtils.setField(executionStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(executionStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(executionStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(executionStep, "engineFactory", engineFactory);
 
         bugAnalysisStep = new BugAnalysisStep();
         ReflectionTestUtils.setField(bugAnalysisStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(bugAnalysisStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(bugAnalysisStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(bugAnalysisStep, "responseValidator", responseValidator);
 
         reportingStep = new ReportingStep();
         ReflectionTestUtils.setField(reportingStep, "agentManager", agentManager);
-        ReflectionTestUtils.setField(reportingStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(reportingStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(reportingStep, "responseValidator", responseValidator);
 
         // Wire LearningStep with LearningEngineImpl
@@ -258,13 +279,34 @@ public class AutonomousQAPipelineTest {
         ReflectionTestUtils.setField(learningEngine, "analyzer", learningAnalyzer);
         ReflectionTestUtils.setField(learningEngine, "healingEngine", learningHealing);
         ReflectionTestUtils.setField(learningEngine, "memoryStore", learningStore);
-        ReflectionTestUtils.setField(learningEngine, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(learningEngine, "objectMapper", mapper);
 
         learningStep = new LearningStep();
         ReflectionTestUtils.setField(learningStep, "learningEngine", learningEngine);
         ReflectionTestUtils.setField(learningStep, "responseValidator", responseValidator);
-        ReflectionTestUtils.setField(learningStep, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(learningStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(learningStep, "memoryStore", learningStore);
+
+        // Setup SelfHealingStep wiring
+        com.aiqaos.healing.memory.RecoveryHistoryStore recoveryStore = new com.aiqaos.healing.memory.RecoveryHistoryStore();
+        ReflectionTestUtils.setField(recoveryStore, "memoryStore", simpleMemStore);
+
+        com.aiqaos.healing.engine.SelfHealingEngineImpl activeHealingEngine = new com.aiqaos.healing.engine.SelfHealingEngineImpl();
+        ReflectionTestUtils.setField(activeHealingEngine, "strategyResolver", new com.aiqaos.healing.strategy.RecoveryStrategyResolver());
+        ReflectionTestUtils.setField(activeHealingEngine, "historyStore", recoveryStore);
+        ReflectionTestUtils.setField(activeHealingEngine, "executionEngineFactory", engineFactory);
+        ReflectionTestUtils.setField(activeHealingEngine, "scriptGenerationService", new com.aiqaos.healing.service.ScriptGenerationService() {
+            @Override
+            public GeneratedScriptSuite regenerate(com.aiqaos.core.model.QAExecutionReport r, String reason) {
+                return new GeneratedScriptSuite();
+            }
+        });
+
+        selfHealingStep = new SelfHealingStep();
+        ReflectionTestUtils.setField(selfHealingStep, "agentManager", agentManager);
+        ReflectionTestUtils.setField(selfHealingStep, "healingEngine", activeHealingEngine);
+        ReflectionTestUtils.setField(selfHealingStep, "responseValidator", responseValidator);
+        ReflectionTestUtils.setField(selfHealingStep, "objectMapper", mapper);
 
         orchestrator = new AutonomousQAPipelineOrchestrator(
                 requirementReaderStep,
@@ -274,7 +316,8 @@ public class AutonomousQAPipelineTest {
                 executionStep,
                 bugAnalysisStep,
                 reportingStep,
-                learningStep
+                learningStep,
+                selfHealingStep
         );
     }
 
@@ -328,7 +371,10 @@ public class AutonomousQAPipelineTest {
         assertNotNull(state.getLearningResult().getRecommendations());
 
         assertNotNull(state.getLearningFeedback());
-        assertTrue(state.getLearningFeedback().isSuccessfullySaved());
+        // SelfHealingStep produces a SelfHealingResult
+        assertNotNull(state.getSelfHealingResult());
+        assertFalse(state.getSelfHealingResult().isHealingApplied());
+        assertEquals("BYPASSED_SUCCESS", state.getSelfHealingResult().getRecoveryStatus());
 
         assertEquals("PASS", context.getVariables().get("executionStatus"));
     }
@@ -353,13 +399,31 @@ public class AutonomousQAPipelineTest {
         AutonomousQAWorkflowState state = context.getQaWorkflowState();
         assertNotNull(state);
         assertNotNull(state.getExecutionResult());
-        assertFalse(state.getExecutionResult().isSuccess());
 
         assertNotNull(state.getBugAnalysisReport());
         assertNotNull(state.getBugAnalysisReport().getRootCause());
         assertNotNull(state.getBugAnalysisReport().getFailureCategory());
 
-        assertEquals("FAIL", context.getVariables().get("executionStatus"));
+        // Since execution failed, SelfHealingStep executes retry.
+        // Under test stub Playwright engine, retry returns SUCCESS (execute retry returns true)
+        // Which sets executionStatus to PASS and selfHealingResult.isRetrySuccessful to true
+        assertNotNull(state.getSelfHealingResult());
+        assertTrue(state.getSelfHealingResult().isHealingApplied());
+        assertTrue(state.getSelfHealingResult().isRetrySuccessful());
+
+        assertEquals("PASS", context.getVariables().get("executionStatus"));
+
+        // ReportingStep runs before SelfHealingStep in the approved pipeline order, so it
+        // originally reports the failure. After a successful heal, SelfHealingStep promotes
+        // the healed execution to be the execution-of-record and patches the existing report
+        // in place so the FINAL report reflects recovery, not the initial failure.
+        assertTrue(state.getExecutionResult().isSuccess());
+        assertNotNull(state.getQaExecutionReport());
+        assertEquals("PASS", state.getQaExecutionReport().getOverallResult());
+
+        // The original failed execution remains preserved for audit purposes.
+        assertNotNull(state.getSelfHealingResult().getOriginalExecution());
+        assertFalse(state.getSelfHealingResult().getOriginalExecution().isSuccess());
     }
 
     @Test

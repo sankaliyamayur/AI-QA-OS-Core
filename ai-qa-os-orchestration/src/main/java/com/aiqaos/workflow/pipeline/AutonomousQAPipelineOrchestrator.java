@@ -23,7 +23,8 @@ public class AutonomousQAPipelineOrchestrator {
             ExecutionStep executionStep,
             BugAnalysisStep bugAnalysisStep,
             ReportingStep reportingStep,
-            LearningStep learningStep) {
+            LearningStep learningStep,
+            SelfHealingStep selfHealingStep) {
         
         pipelineSteps.add(requirementReaderStep);
         pipelineSteps.add(qaAnalysisStep);
@@ -33,6 +34,7 @@ public class AutonomousQAPipelineOrchestrator {
         pipelineSteps.add(bugAnalysisStep);
         pipelineSteps.add(reportingStep);
         pipelineSteps.add(learningStep);
+        pipelineSteps.add(selfHealingStep);
     }
 
     public WorkflowResponse runPipeline(WorkflowRequest request, WorkflowContext context) {

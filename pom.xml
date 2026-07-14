@@ -23,6 +23,7 @@
         <module>ai-qa-os-memory</module>
         <module>ai-qa-os-learning</module>
         <module>ai-qa-os-execution</module>
+        <module>ai-qa-os-healing</module>
         <module>ai-qa-os-testdata</module>
         <module>ai-qa-os-reporting</module>
         <module>ai-qa-os-security</module>

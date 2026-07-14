@@ -377,6 +377,42 @@ public class LLMResponseValidator {
                         }
                     }
                 }
+            } else if (type == AgentType.SELF_HEALING_ENGINEER) {
+                if (!(root instanceof ObjectNode)) {
+                    throw new IllegalArgumentException("Root of self-healing decision JSON must be an object");
+                }
+                ObjectNode objectNode = (ObjectNode) root;
+
+                // 1. Casing normalization
+                if (objectNode.has("healingaction") && !objectNode.has("healingAction")) {
+                    objectNode.set("healingAction", objectNode.get("healingaction"));
+                    objectNode.remove("healingaction");
+                }
+                if (objectNode.has("retryrequired") && !objectNode.has("retryRequired")) {
+                    objectNode.set("retryRequired", objectNode.get("retryrequired"));
+                    objectNode.remove("retryrequired");
+                }
+                if (objectNode.has("scriptregenerationrequired") && !objectNode.has("scriptRegenerationRequired")) {
+                    objectNode.set("scriptRegenerationRequired", objectNode.get("scriptregenerationrequired"));
+                    objectNode.remove("scriptregenerationrequired");
+                }
+
+                // 2. Reject only: healingAction missing
+                if (!objectNode.has("healingAction") || objectNode.get("healingAction").isNull() || objectNode.get("healingAction").asText().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Validation failed: 'healingAction' is missing or empty in SELF_HEALING_ENGINEER decision response");
+                }
+                if (!objectNode.has("reason") || objectNode.get("reason").isNull()) {
+                    objectNode.put("reason", "No reason provided by self-healing agent.");
+                }
+                if (!objectNode.has("confidence") || objectNode.get("confidence").isNull()) {
+                    objectNode.put("confidence", 0.0);
+                }
+                if (!objectNode.has("retryRequired") || objectNode.get("retryRequired").isNull()) {
+                    objectNode.put("retryRequired", true);
+                }
+                if (!objectNode.has("scriptRegenerationRequired") || objectNode.get("scriptRegenerationRequired").isNull()) {
+                    objectNode.put("scriptRegenerationRequired", false);
+                }
             }
 
             return objectMapper.writeValueAsString(root);
