@@ -20,15 +20,16 @@
             <artifactId>ai-qa-os-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.aiqaos</groupId>
-            <artifactId>ai-qa-os-orchestration</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-agents</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

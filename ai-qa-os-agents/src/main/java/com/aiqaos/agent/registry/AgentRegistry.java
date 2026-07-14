@@ -2,6 +2,8 @@ package com.aiqaos.agent.registry;
 
 import com.aiqaos.core.engine.Agent;
 import com.aiqaos.core.enums.AgentType;
+import org.springframework.context.event.EventListener;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.UUID;
@@ -11,6 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AgentRegistry {
     private final Map<UUID, Agent<?, ?>> registry = new ConcurrentHashMap<>();
     private final Map<AgentType, Agent<?, ?>> typedRegistry = new ConcurrentHashMap<>();
+
+    @EventListener
+    public void handleContextRefreshed(ContextRefreshedEvent event) {
+        Map<String, Agent> agentBeans = event.getApplicationContext().getBeansOfType(Agent.class);
+        for (Agent<?, ?> agent : agentBeans.values()) {
+            register(UUID.randomUUID(), agent);
+        }
+    }
 
     public void register(UUID agentId, Agent<?, ?> agent) {
         registry.put(agentId, agent);
