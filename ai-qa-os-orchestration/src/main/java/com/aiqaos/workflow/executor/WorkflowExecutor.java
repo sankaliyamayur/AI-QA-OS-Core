@@ -43,79 +43,10 @@ public class WorkflowExecutor {
 
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
+    @Autowired
+    private com.aiqaos.workflow.pipeline.AutonomousQAPipelineOrchestrator orchestrator;
+
     public WorkflowResponse execute(WorkflowRequest request, WorkflowContext context) {
-        UUID executionId = UUID.randomUUID();
-        UUID workflowId = request.getMetadata().getWorkflowId() != null ? 
-            request.getMetadata().getWorkflowId() : UUID.randomUUID();
-
-        eventPublisher.publish(new WorkflowStartedEvent(workflowId));
-
-        String lookupKey = request.getMetadata().getWorkflowId() != null ? 
-            request.getMetadata().getWorkflowId().toString() : request.getWorkflowName();
-
-        WorkflowDefinition def = registry.getWorkflow(lookupKey);
-        if (def == null) {
-            def = new WorkflowDefinition();
-            def.setId(lookupKey);
-            def.setName(request.getWorkflowName() != null ? request.getWorkflowName() : "Fallback Workflow");
-            
-            WorkflowNode node = new WorkflowNode();
-            node.setStepId("step1");
-            node.setAgentType("QA_ANALYST");
-            node.setExecutionOrder(1);
-            def.getSteps().add(node);
-        }
-
-        WorkflowVariables vars = new WorkflowVariables();
-        if (request.getInputs() != null) {
-            request.getInputs().forEach(vars::set);
-        }
-
-        List<WorkflowStepResultDTO> stepResults = new ArrayList<>();
-        boolean failed = false;
-
-        List<WorkflowNode> steps = def.getSteps();
-        
-        for (WorkflowNode node : steps) {
-            if (node.isParallel()) {
-                CompletableFuture<WorkflowStepResultDTO> future = CompletableFuture.supplyAsync(
-                    () -> stepExecutor.executeStep(node, vars), executorService
-                );
-                try {
-                    WorkflowStepResultDTO r = future.get();
-                    stepResults.add(r);
-                    if ("FAILED".equals(r.getStatus())) {
-                        failed = true;
-                        break;
-                    }
-                } catch (Exception e) {
-                    failed = true;
-                    break;
-                }
-            } else {
-                WorkflowStepResultDTO r = stepExecutor.executeStep(node, vars);
-                stepResults.add(r);
-                if ("FAILED".equals(r.getStatus())) {
-                    failed = true;
-                    break;
-                }
-            }
-        }
-
-        WorkflowResponse response = new WorkflowResponse();
-        response.getMetadata().setWorkflowId(workflowId);
-        response.getMetadata().setExecutionId(executionId);
-
-        if (failed) {
-            eventPublisher.publish(new WorkflowFailedEvent(workflowId, "A step execution failed."));
-            response.setStatus("FAILED");
-            response.setMessage("Workflow failed execution.");
-        } else {
-            eventPublisher.publish(new WorkflowCompletedEvent(workflowId));
-            response.setStatus("SUCCESS");
-            response.setMessage("Workflow completed successfully.");
-        }
-
-        return response;
+        return orchestrator.runPipeline(request, context);
     }
 }

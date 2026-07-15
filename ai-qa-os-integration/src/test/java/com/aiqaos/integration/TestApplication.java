@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(scanBasePackages = {"com.aiqaos"})
 @EntityScan(basePackages = {"com.aiqaos"})
 @EnableJpaRepositories(basePackages = {"com.aiqaos"})
+@org.springframework.data.jpa.repository.config.EnableJpaAuditing
 public class TestApplication {
     public static void main(String[] args) {
         SpringApplication.run(TestApplication.class, args);
