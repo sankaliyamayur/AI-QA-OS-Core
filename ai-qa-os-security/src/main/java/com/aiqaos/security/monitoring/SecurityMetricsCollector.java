@@ -3,7 +3,7 @@ package com.aiqaos.security.monitoring;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.atomic.AtomicLong;
 
-@Component
+@Component("securityModuleMetricsCollector")
 public class SecurityMetricsCollector {
 
     private final AtomicLong failedLogins = new AtomicLong(0);
