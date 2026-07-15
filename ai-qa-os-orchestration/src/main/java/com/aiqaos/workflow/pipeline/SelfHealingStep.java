@@ -146,6 +146,7 @@ public class SelfHealingStep implements WorkflowStep<WorkflowRequest, WorkflowRe
                 if (healedExecution != null) {
                     context.getQaWorkflowState().setExecutionResult(healedExecution);
                     patchReportForHealedExecution(context, healingResult);
+                    markBugAnalysisResolved(context);
                 }
             } else {
                 response.setStatus("SUCCESS"); // Fail-safe: step itself returns SUCCESS to keep pipeline running
@@ -186,8 +187,18 @@ public class SelfHealingStep implements WorkflowStep<WorkflowRequest, WorkflowRe
                 + ") but was successfully recovered via self-healing strategy '"
                 + describe(healingResult.getActionType())
                 + "'. This report reflects the final, healed execution outcome.");
+        report.setStatus("HEALED");
 
         context.getQaWorkflowState().setQaExecutionReport(report);
+    }
+
+    private void markBugAnalysisResolved(WorkflowContext context) {
+        BugAnalysisReport bugReport = context.getQaWorkflowState().getBugAnalysisReport();
+        if (bugReport == null) {
+            return;
+        }
+        bugReport.setStatus("RESOLVED");
+        context.getQaWorkflowState().setBugAnalysisReport(bugReport);
     }
 
     private String describe(String value) {

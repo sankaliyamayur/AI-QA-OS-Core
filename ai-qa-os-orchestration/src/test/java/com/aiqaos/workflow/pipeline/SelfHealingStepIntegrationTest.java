@@ -137,6 +137,7 @@ public class SelfHealingStepIntegrationTest {
 
         BugAnalysisReport bugReport = new BugAnalysisReport();
         bugReport.setFailureCategory("LOCATOR_FAIL");
+        bugReport.setStatus("OPEN");
         state.setBugAnalysisReport(bugReport);
 
         LearningResult learningResult = new LearningResult();
@@ -145,6 +146,7 @@ public class SelfHealingStepIntegrationTest {
         // Report as originally compiled by ReportingStep, reflecting the initial failure
         com.aiqaos.core.model.QAExecutionReport initialReport = new com.aiqaos.core.model.QAExecutionReport();
         initialReport.setReportId("RPT-INTEG");
+        initialReport.setStatus("COMPLETED");
         initialReport.setOverallResult("FAIL");
         initialReport.setTotalTestCases(2);
         initialReport.setPassedTests(0);
@@ -176,10 +178,14 @@ public class SelfHealingStepIntegrationTest {
         assertEquals(0, state.getQaExecutionReport().getFailedTests());
         assertEquals(100.0, state.getQaExecutionReport().getPassPercentage());
         assertTrue(state.getQaExecutionReport().getSummary().toLowerCase().contains("self-healing"));
+        assertEquals("HEALED", state.getQaExecutionReport().getStatus());
 
         // 4. Original failed execution remains preserved for audit purposes
         assertNotNull(state.getSelfHealingResult().getOriginalExecution());
         assertFalse(state.getSelfHealingResult().getOriginalExecution().isSuccess());
         assertEquals("Selector mismatch error", state.getSelfHealingResult().getOriginalExecution().getErrorMessage());
+
+        // 5. BugAnalysisReport transitions from OPEN to RESOLVED once self-healing succeeds
+        assertEquals("RESOLVED", state.getBugAnalysisReport().getStatus());
     }
 }

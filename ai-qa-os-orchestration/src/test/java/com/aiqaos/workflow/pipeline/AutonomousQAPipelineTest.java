@@ -424,6 +424,10 @@ public class AutonomousQAPipelineTest {
         // The original failed execution remains preserved for audit purposes.
         assertNotNull(state.getSelfHealingResult().getOriginalExecution());
         assertFalse(state.getSelfHealingResult().getOriginalExecution().isSuccess());
+
+        // Report status and bug status are also promoted to reflect the healed outcome.
+        assertEquals("HEALED", state.getQaExecutionReport().getStatus());
+        assertEquals("RESOLVED", state.getBugAnalysisReport().getStatus());
     }
 
     @Test
