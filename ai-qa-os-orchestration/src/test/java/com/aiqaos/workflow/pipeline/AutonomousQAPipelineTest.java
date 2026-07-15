@@ -30,21 +30,45 @@ import com.aiqaos.provider.manager.LLMProviderManager;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
 import com.aiqaos.provider.model.TokenUsage;
+import com.aiqaos.observability.event.ObservabilityEventPublisher;
+import com.aiqaos.observability.repository.AgentMetricsRepository;
+import com.aiqaos.observability.repository.BugMetricRepository;
+import com.aiqaos.observability.repository.HealingMetricRepository;
+import com.aiqaos.observability.repository.LLMCostRepository;
+import com.aiqaos.observability.repository.TimelineEventRepository;
+import com.aiqaos.workflow.entity.WorkflowExecutionEntity;
+import com.aiqaos.workflow.repository.WorkflowExecutionRepository;
+import com.aiqaos.workflow.service.AgentMetricsService;
+import com.aiqaos.workflow.service.BugAnalyticsService;
+import com.aiqaos.workflow.service.TimelineService;
+import com.aiqaos.workflow.service.WorkflowExecutionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class AutonomousQAPipelineTest {
 
     private StubRequirementReader reader;
     private StubRequirementParser parser;
+
+    private final Map<UUID, WorkflowExecutionEntity> executionStore = new HashMap<>();
+    private final List<com.aiqaos.observability.entity.AgentMetricEntity> recordedAgentMetrics = new ArrayList<>();
+    private final List<com.aiqaos.observability.entity.TimelineEventEntity> recordedTimelineEvents = new ArrayList<>();
+    private final List<com.aiqaos.observability.entity.BugMetricEntity> recordedBugMetrics = new ArrayList<>();
 
     private RequirementReaderStep requirementReaderStep;
     private QAAnalysisStep qaAnalysisStep;
@@ -301,12 +325,78 @@ public class AutonomousQAPipelineTest {
                 return new GeneratedScriptSuite();
             }
         });
+        ReflectionTestUtils.setField(activeHealingEngine, "observabilityEventPublisher",
+                NoOpObservabilityEventPublisherFactory.create());
 
         selfHealingStep = new SelfHealingStep();
         ReflectionTestUtils.setField(selfHealingStep, "agentManager", agentManager);
         ReflectionTestUtils.setField(selfHealingStep, "healingEngine", activeHealingEngine);
         ReflectionTestUtils.setField(selfHealingStep, "responseValidator", responseValidator);
         ReflectionTestUtils.setField(selfHealingStep, "objectMapper", mapper);
+
+        // --- Phase 22 observability/dashboard service wiring (lightweight Mockito doubles) ---
+        executionStore.clear();
+        recordedAgentMetrics.clear();
+        recordedTimelineEvents.clear();
+        recordedBugMetrics.clear();
+        WorkflowExecutionRepository workflowExecutionRepository = mock(WorkflowExecutionRepository.class);
+        when(workflowExecutionRepository.save(any())).thenAnswer(inv -> {
+            WorkflowExecutionEntity entity = inv.getArgument(0);
+            if (entity.getId() == null) {
+                entity.setId(UUID.randomUUID());
+            }
+            executionStore.put(entity.getExecutionId(), entity);
+            return entity;
+        });
+        when(workflowExecutionRepository.findByExecutionId(any()))
+                .thenAnswer(inv -> Optional.ofNullable(executionStore.get(inv.getArgument(0))));
+
+        LLMCostRepository llmCostRepository = mock(LLMCostRepository.class);
+        when(llmCostRepository.findByRequestId(anyString())).thenReturn(List.of());
+
+        AgentMetricsRepository agentMetricsRepository = mock(AgentMetricsRepository.class);
+        when(agentMetricsRepository.save(any())).thenAnswer(inv -> {
+            recordedAgentMetrics.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+
+        TimelineEventRepository timelineEventRepository = mock(TimelineEventRepository.class);
+        when(timelineEventRepository.save(any())).thenAnswer(inv -> {
+            recordedTimelineEvents.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+        when(timelineEventRepository.countByExecutionId(any())).thenAnswer(inv -> {
+            UUID executionId = inv.getArgument(0);
+            return (int) recordedTimelineEvents.stream()
+                    .filter(e -> executionId.equals(e.getExecutionId()))
+                    .count();
+        });
+
+        BugMetricRepository bugMetricRepository = mock(BugMetricRepository.class);
+        when(bugMetricRepository.save(any())).thenAnswer(inv -> {
+            recordedBugMetrics.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+
+        HealingMetricRepository healingMetricRepository = mock(HealingMetricRepository.class);
+        when(healingMetricRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ApplicationEventPublisher springEventPublisher = mock(ApplicationEventPublisher.class);
+        ObjectMapper observabilityMapper = new ObjectMapper();
+        observabilityMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+
+        ObservabilityEventPublisher observabilityEventPublisher = new ObservabilityEventPublisher(
+                agentMetricsRepository, timelineEventRepository, bugMetricRepository,
+                healingMetricRepository, springEventPublisher, observabilityMapper);
+
+        WorkflowExecutionService workflowExecutionService =
+                new WorkflowExecutionService(workflowExecutionRepository, llmCostRepository);
+        TimelineService timelineService =
+                new TimelineService(observabilityEventPublisher, timelineEventRepository);
+        AgentMetricsService agentMetricsService =
+                new AgentMetricsService(observabilityEventPublisher, agentMetricsRepository);
+        BugAnalyticsService bugAnalyticsService =
+                new BugAnalyticsService(observabilityEventPublisher, bugMetricRepository);
 
         orchestrator = new AutonomousQAPipelineOrchestrator(
                 requirementReaderStep,
@@ -317,7 +407,11 @@ public class AutonomousQAPipelineTest {
                 bugAnalysisStep,
                 reportingStep,
                 learningStep,
-                selfHealingStep
+                selfHealingStep,
+                workflowExecutionService,
+                timelineService,
+                agentMetricsService,
+                bugAnalyticsService
         );
     }
 
@@ -377,6 +471,22 @@ public class AutonomousQAPipelineTest {
         assertEquals("BYPASSED_SUCCESS", state.getSelfHealingResult().getRecoveryStatus());
 
         assertEquals("PASS", context.getVariables().get("executionStatus"));
+
+        // Phase 22 observability event flow: a workflow_executions row was created and completed,
+        // and a STEP_STARTED/STEP_COMPLETED timeline pair plus an agent metric was recorded per step.
+        UUID executionId = context.getMetadata().getExecutionId();
+        assertNotNull(executionId);
+        WorkflowExecutionEntity executionRecord = executionStore.get(executionId);
+        assertNotNull(executionRecord);
+        assertEquals("SUCCESS", executionRecord.getStatus());
+        assertNotNull(executionRecord.getEndTime());
+        assertEquals(9, executionRecord.getTotalSteps());
+        assertEquals(9, executionRecord.getSuccessSteps());
+        assertEquals(0, executionRecord.getFailedSteps());
+
+        assertEquals(18, recordedTimelineEvents.size());
+        assertEquals(9, recordedAgentMetrics.size());
+        assertTrue(recordedAgentMetrics.stream().allMatch(com.aiqaos.observability.entity.AgentMetricEntity::isSuccess));
     }
 
     @Test
@@ -428,6 +538,25 @@ public class AutonomousQAPipelineTest {
         // Report status and bug status are also promoted to reflect the healed outcome.
         assertEquals("HEALED", state.getQaExecutionReport().getStatus());
         assertEquals("RESOLVED", state.getBugAnalysisReport().getStatus());
+
+        // Phase 22 observability event flow: ExecutionStep's failure is recorded (but the
+        // pipeline continues), and BugAnalysisStep's report is persisted as a bug metric.
+        UUID executionId = context.getMetadata().getExecutionId();
+        WorkflowExecutionEntity executionRecord = executionStore.get(executionId);
+        assertNotNull(executionRecord);
+        assertEquals(9, executionRecord.getTotalSteps());
+        assertEquals(1, executionRecord.getFailedSteps());
+        assertEquals(8, executionRecord.getSuccessSteps());
+
+        assertEquals(18, recordedTimelineEvents.size());
+        assertEquals(9, recordedAgentMetrics.size());
+        long failedAgentMetrics = recordedAgentMetrics.stream()
+                .filter(m -> !m.isSuccess())
+                .count();
+        assertEquals(1, failedAgentMetrics);
+
+        assertEquals(1, recordedBugMetrics.size());
+        assertEquals("ELEMENT_NOT_FOUND", recordedBugMetrics.get(0).getFailureCategory());
     }
 
     @Test

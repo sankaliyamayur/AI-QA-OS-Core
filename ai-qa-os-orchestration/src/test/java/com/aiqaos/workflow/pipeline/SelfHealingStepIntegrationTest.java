@@ -98,6 +98,8 @@ public class SelfHealingStepIntegrationTest {
                 return new GeneratedScriptSuite();
             }
         });
+        ReflectionTestUtils.setField(healingEngine, "observabilityEventPublisher",
+                NoOpObservabilityEventPublisherFactory.create());
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());

@@ -1,6 +1,8 @@
 package com.aiqaos.provider.cost;
 
+import com.aiqaos.observability.entity.AgentTraceEntity;
 import com.aiqaos.observability.entity.LLMCostEntity;
+import com.aiqaos.observability.repository.AgentTraceRepository;
 import com.aiqaos.observability.repository.LLMCostRepository;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
@@ -13,9 +15,11 @@ import java.util.UUID;
 public class CostTracker {
 
     private final LLMCostRepository costRepository;
+    private final AgentTraceRepository agentTraceRepository;
 
-    public CostTracker(LLMCostRepository costRepository) {
+    public CostTracker(LLMCostRepository costRepository, AgentTraceRepository agentTraceRepository) {
         this.costRepository = costRepository;
+        this.agentTraceRepository = agentTraceRepository;
     }
 
     public void track(LLMRequest req, LLMResponse resp, String providerName) {
@@ -38,6 +42,21 @@ public class CostTracker {
         entity.setDeleted(false);
 
         costRepository.save(entity);
+
+        // Enterprise-grade dashboard drill-down: durable prompt/response history per LLM call.
+        AgentTraceEntity trace = new AgentTraceEntity();
+        trace.setCorrelationId(req.getCorrelationId());
+        trace.setAgentType(req.getAgentType());
+        trace.setPurpose(req.getPurpose());
+        trace.setProvider(providerName);
+        trace.setModel(resp.getModel());
+        trace.setPrompt(req.getPrompt());
+        trace.setResponse(resp.getText());
+        trace.setPromptTokens(resp.getUsage().getInputTokens());
+        trace.setCompletionTokens(resp.getUsage().getOutputTokens());
+        trace.setLatencyMs(resp.getLatencyMs());
+        trace.setTimestamp(LocalDateTime.now());
+        agentTraceRepository.save(trace);
     }
 
     private double calculateCost(String provider, String model, long input, long output) {

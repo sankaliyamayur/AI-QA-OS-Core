@@ -53,6 +53,27 @@ public class WorkflowExecutionEntity extends BaseEntity {
     @Column(name = "token_usage")
     private long tokenUsage;
 
+    @Column(name = "git_commit")
+    private String gitCommit;
+
+    @Column(name = "git_branch")
+    private String gitBranch;
+
+    @Column(name = "llm_model")
+    private String llmModel;
+
+    @Column(name = "pipeline_version")
+    private String pipelineVersion;
+
+    @Column(name = "environment")
+    private String environment;
+
+    @Column(name = "browser")
+    private String browser;
+
+    @Column(name = "current_step")
+    private String currentStep;
+
     public UUID getWorkflowId() { return workflowId; }
     public void setWorkflowId(UUID workflowId) { this.workflowId = workflowId; }
     public UUID getExecutionId() { return executionId; }
@@ -81,4 +102,18 @@ public class WorkflowExecutionEntity extends BaseEntity {
     public void setExecutionCost(double executionCost) { this.executionCost = executionCost; }
     public long getTokenUsage() { return tokenUsage; }
     public void setTokenUsage(long tokenUsage) { this.tokenUsage = tokenUsage; }
+    public String getGitCommit() { return gitCommit; }
+    public void setGitCommit(String gitCommit) { this.gitCommit = gitCommit; }
+    public String getGitBranch() { return gitBranch; }
+    public void setGitBranch(String gitBranch) { this.gitBranch = gitBranch; }
+    public String getLlmModel() { return llmModel; }
+    public void setLlmModel(String llmModel) { this.llmModel = llmModel; }
+    public String getPipelineVersion() { return pipelineVersion; }
+    public void setPipelineVersion(String pipelineVersion) { this.pipelineVersion = pipelineVersion; }
+    public String getEnvironment() { return environment; }
+    public void setEnvironment(String environment) { this.environment = environment; }
+    public String getBrowser() { return browser; }
+    public void setBrowser(String browser) { this.browser = browser; }
+    public String getCurrentStep() { return currentStep; }
+    public void setCurrentStep(String currentStep) { this.currentStep = currentStep; }
 }

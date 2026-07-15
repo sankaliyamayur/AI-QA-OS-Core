@@ -54,6 +54,8 @@ public class SelfHealingLoopProtectionTest {
         ReflectionTestUtils.setField(engine, "strategyResolver", new RecoveryStrategyResolver());
         ReflectionTestUtils.setField(engine, "historyStore", historyStore);
         ReflectionTestUtils.setField(engine, "executionEngineFactory", executionEngineFactory);
+        ReflectionTestUtils.setField(engine, "observabilityEventPublisher",
+                NoOpObservabilityEventPublisherFactory.create());
     }
 
     @Test

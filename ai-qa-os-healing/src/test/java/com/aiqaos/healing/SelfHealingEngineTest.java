@@ -14,8 +14,15 @@ import com.aiqaos.healing.memory.RecoveryHistoryStore;
 import com.aiqaos.healing.service.ScriptGenerationService;
 import com.aiqaos.healing.strategy.RecoveryStrategyResolver;
 import com.aiqaos.memory.store.MemoryStore;
+import com.aiqaos.observability.event.ObservabilityEventPublisher;
+import com.aiqaos.observability.repository.AgentMetricsRepository;
+import com.aiqaos.observability.repository.BugMetricRepository;
+import com.aiqaos.observability.repository.HealingMetricRepository;
+import com.aiqaos.observability.repository.TimelineEventRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
@@ -24,6 +31,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class SelfHealingEngineTest {
 
@@ -65,6 +75,18 @@ public class SelfHealingEngineTest {
         ReflectionTestUtils.setField(engine, "historyStore", historyStore);
         ReflectionTestUtils.setField(engine, "executionEngineFactory", executionEngineFactory);
         ReflectionTestUtils.setField(engine, "scriptGenerationService", scriptGenerationService);
+
+        AgentMetricsRepository agentMetricsRepository = mock(AgentMetricsRepository.class);
+        TimelineEventRepository timelineEventRepository = mock(TimelineEventRepository.class);
+        BugMetricRepository bugMetricRepository = mock(BugMetricRepository.class);
+        HealingMetricRepository healingMetricRepository = mock(HealingMetricRepository.class);
+        when(healingMetricRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        ApplicationEventPublisher springEventPublisher = mock(ApplicationEventPublisher.class);
+
+        ObservabilityEventPublisher observabilityEventPublisher = new ObservabilityEventPublisher(
+                agentMetricsRepository, timelineEventRepository, bugMetricRepository,
+                healingMetricRepository, springEventPublisher, new ObjectMapper());
+        ReflectionTestUtils.setField(engine, "observabilityEventPublisher", observabilityEventPublisher);
     }
 
     @Test

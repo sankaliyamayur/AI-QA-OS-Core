@@ -12,6 +12,8 @@ import com.aiqaos.execution.engine.ExecutionEngineFactory;
 import com.aiqaos.healing.memory.RecoveryHistoryStore;
 import com.aiqaos.healing.service.ScriptGenerationService;
 import com.aiqaos.healing.strategy.RecoveryStrategyResolver;
+import com.aiqaos.observability.entity.HealingMetricEntity;
+import com.aiqaos.observability.event.ObservabilityEventPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +35,9 @@ public class SelfHealingEngineImpl implements SelfHealingEngine {
 
     @Autowired
     private ScriptGenerationService scriptGenerationService;
+
+    @Autowired
+    private ObservabilityEventPublisher observabilityEventPublisher;
 
     private static final int MAX_HEALING_ATTEMPTS = 3;
 
@@ -58,6 +63,7 @@ public class SelfHealingEngineImpl implements SelfHealingEngine {
             result.setRetrySuccessful(false);
             result.setRecoveryStatus("MAX_ATTEMPTS_EXCEEDED");
             result.setAppliedFix("Terminated self-healing execution loop due to MAX_HEALING_ATTEMPTS limit (3)");
+            recordHealingMetric(result, executionId);
             return result;
         }
 
@@ -146,6 +152,35 @@ public class SelfHealingEngineImpl implements SelfHealingEngine {
         // Store attempt record in MemoryStore
         historyStore.storeAttempt(executionId, attempt);
 
+        recordHealingMetric(result, executionId);
         return result;
+    }
+
+    private void recordHealingMetric(SelfHealingResult result, String executionId) {
+        HealingMetricEntity metric = new HealingMetricEntity();
+        metric.setHealingId(result.getHealingId());
+        metric.setExecutionId(toUuid(executionId));
+        metric.setFailureCategory(result.getFailureCategory());
+        metric.setActionType(result.getActionType());
+        metric.setHealingStrategy(result.getHealingStrategy());
+        metric.setRetryCount(result.getRetryCount());
+        metric.setHealingApplied(result.isHealingApplied());
+        metric.setRetrySuccessful(result.isRetrySuccessful());
+        metric.setRecoveryStatus(result.getRecoveryStatus());
+        metric.setImprovementScore(result.getImprovementScore());
+        metric.setAppliedFix(result.getAppliedFix());
+        metric.setRecordedAt(LocalDateTime.now());
+        observabilityEventPublisher.recordHealingMetric(metric);
+    }
+
+    private static UUID toUuid(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }
