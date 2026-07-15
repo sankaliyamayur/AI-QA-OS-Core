@@ -28,9 +28,11 @@ public class QAAnalystAgentTest {
         // Setup stubs using ReflectionTestUtils
         StubPromptEngine stubPromptEngine = new StubPromptEngine("Rendered Pebble Template");
         StubLLMProviderManager stubLLMProvider = new StubLLMProviderManager("{\"analysisSummary\":\"Login story verified\"}");
+        com.aiqaos.agent.config.AgentPropertiesConfig propertiesConfig = new com.aiqaos.agent.config.AgentPropertiesConfig();
 
         ReflectionTestUtils.setField(agent, "promptEngine", stubPromptEngine);
         ReflectionTestUtils.setField(agent, "providerManager", stubLLMProvider);
+        ReflectionTestUtils.setField(agent, "agentPropertiesConfig", propertiesConfig);
 
         AgentRequest request = new AgentRequest();
         request.setPrompt("As an admin, I want to login...");

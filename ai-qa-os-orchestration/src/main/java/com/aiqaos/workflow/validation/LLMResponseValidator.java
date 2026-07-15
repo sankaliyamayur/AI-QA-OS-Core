@@ -20,7 +20,16 @@ public class LLMResponseValidator {
         }
 
         try {
-            JsonNode root = objectMapper.readTree(rawJson);
+            String cleanedJson = rawJson.trim();
+            if (cleanedJson.startsWith("```")) {
+                cleanedJson = cleanedJson.substring(cleanedJson.indexOf("\n") + 1);
+                if (cleanedJson.endsWith("```")) {
+                    cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
+                }
+                cleanedJson = cleanedJson.trim();
+            }
+
+            JsonNode root = objectMapper.readTree(cleanedJson);
 
             if (type == AgentType.TEST_CASE_GENERATOR) {
                 if (!(root instanceof ObjectNode)) {

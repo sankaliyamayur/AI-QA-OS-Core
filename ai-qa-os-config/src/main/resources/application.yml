@@ -12,3 +12,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+qa:
+  prompts:
+    qa-analysis: latest
