@@ -16,7 +16,11 @@ aiqaos:
   security:
     enabled: false
   features:
-    flags:
-      mcp-integration: false
-      ai-brain: true
       realtime-logging: false
+
+security:
+  jwt:
+    secret: 9a7263b65e94b29c9ef63d274bfd4e1d73504ad09bca3b22e11d2e16f3918a5f
+    expirationMs: 3600000
+    refreshExpirationMs: 86400000
+    issuer: ai-qa-os-auth-service
