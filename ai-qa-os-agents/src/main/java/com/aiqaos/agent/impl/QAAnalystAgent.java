@@ -61,7 +61,10 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
         Exception lastException = null;
 
         // Rich configuration & prompt version mapping setup
-        String activeVersion = agentPropertiesConfig.getPrompts().getOrDefault("qa-analysis", "latest");
+        String activeVersion = "latest";
+        if (agentPropertiesConfig != null && agentPropertiesConfig.getPrompts() != null) {
+            activeVersion = agentPropertiesConfig.getPrompts().getOrDefault("qa-analysis", "latest");
+        }
 
         while (attempts < maxRetries) {
             attempts++;
