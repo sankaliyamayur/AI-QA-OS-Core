@@ -1,4 +1,4 @@
-package com.aiqaos.security.entity;
+package com.aiqaos.security.audit;
 
 import com.aiqaos.core.entity.BaseEntity;
 import jakarta.persistence.Column;

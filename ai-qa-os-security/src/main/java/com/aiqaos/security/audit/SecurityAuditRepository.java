@@ -1,6 +1,6 @@
-package com.aiqaos.security.repository;
+package com.aiqaos.security.audit;
 
-import com.aiqaos.security.entity.SecurityAuditEntity;
+import com.aiqaos.security.audit.SecurityAuditEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.UUID;

@@ -1,6 +1,6 @@
-package com.aiqaos.security.repository;
+package com.aiqaos.security.rbac;
 
-import com.aiqaos.security.entity.UserEntity;
+import com.aiqaos.security.rbac.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
