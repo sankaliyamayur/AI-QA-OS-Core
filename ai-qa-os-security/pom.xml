@@ -58,5 +58,12 @@
             <artifactId>bucket4j-core</artifactId>
             <version>8.10.1</version>
         </dependency>
+
+        <!-- Testing context dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
