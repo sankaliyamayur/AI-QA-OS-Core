@@ -22,7 +22,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** See ExecutionHistoryControllerTest for why this wires a real service over mocked repos. */
-@WebMvcTest(ComparisonController.class)
+@WebMvcTest(value = ComparisonController.class, excludeAutoConfiguration = {
+    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration.class
+})
 @Import(ComparisonControllerTest.TestConfig.class)
 class ComparisonControllerTest {
 
@@ -34,6 +37,15 @@ class ComparisonControllerTest {
 
     @MockBean
     private LLMCostRepository llmCostRepository;
+
+    @MockBean
+    private com.aiqaos.security.jwt.JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private com.aiqaos.security.rbac.UserRepository userRepository;
+
+    @MockBean
+    private com.aiqaos.security.monitoring.SecurityMetricsCollector securityMetricsCollector;
 
     @TestConfiguration
     static class TestConfig {

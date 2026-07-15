@@ -29,7 +29,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * repositories - mocking WorkflowExecutionService itself (a concrete class) hits a
  * Mockito/ByteBuddy limitation under newer JDKs, whereas interface mocks (JDK proxies) don't.
  */
-@WebMvcTest(ExecutionHistoryController.class)
+@WebMvcTest(value = ExecutionHistoryController.class, excludeAutoConfiguration = {
+    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration.class
+})
 @Import(ExecutionHistoryControllerTest.TestConfig.class)
 class ExecutionHistoryControllerTest {
 
@@ -41,6 +44,15 @@ class ExecutionHistoryControllerTest {
 
     @MockBean
     private LLMCostRepository llmCostRepository;
+
+    @MockBean
+    private com.aiqaos.security.jwt.JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private com.aiqaos.security.rbac.UserRepository userRepository;
+
+    @MockBean
+    private com.aiqaos.security.monitoring.SecurityMetricsCollector securityMetricsCollector;
 
     @TestConfiguration
     static class TestConfig {
