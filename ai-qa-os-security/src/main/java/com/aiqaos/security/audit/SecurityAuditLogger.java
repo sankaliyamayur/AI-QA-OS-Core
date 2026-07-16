@@ -1,5 +1,6 @@
 package com.aiqaos.security.audit;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "aiqaos.security.database-enabled", havingValue = "true", matchIfMissing = true)
 public class SecurityAuditLogger {
 
     private final SecurityAuditRepository securityAuditRepository;

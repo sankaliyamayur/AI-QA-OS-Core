@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.springframework.beans.factory.ObjectProvider;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -23,9 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, ObjectProvider<UserRepository> userRepositoryProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
-        this.userRepository = userRepository;
+        this.userRepository = userRepositoryProvider.getIfAvailable();
     }
 
     @Override
@@ -40,10 +41,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtTokenProvider.getClaimsFromToken(token);
                 String userId = claims.getSubject();
 
-                UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
-                if (user != null && user.isEnabled() && !user.isAccountLocked()) {
+                if (userRepository != null) {
+                    UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
+                    if (user != null && user.isEnabled() && !user.isAccountLocked()) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                user, null, new ArrayList<>() // Authorities bound here later in dynamic RBAC
+                        );
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+                } else {
+                    String username = claims.get("username", String.class);
+                    if (username == null) {
+                        username = userId;
+                    }
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            user, null, new ArrayList<>() // Authorities bound here later in dynamic RBAC
+                            username, null, new ArrayList<>()
                     );
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);

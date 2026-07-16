@@ -6,12 +6,14 @@ import com.aiqaos.security.rbac.UserRepository;
 import com.aiqaos.security.rbac.UserSessionEntity;
 import com.aiqaos.security.rbac.UserSessionRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "aiqaos.security.database-enabled", havingValue = "true", matchIfMissing = true)
 public class AuthenticationService {
 
     private final UserRepository userRepository;

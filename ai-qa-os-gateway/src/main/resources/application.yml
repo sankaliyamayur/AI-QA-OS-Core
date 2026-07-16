@@ -1,9 +1,13 @@
-﻿server:
-  port: 8080
+server:
+  port: 8082
 
 spring:
   application:
     name: ai-qa-os-gateway
+
+aiqaos:
+  security:
+    database-enabled: false
   cloud:
     gateway:
       routes:

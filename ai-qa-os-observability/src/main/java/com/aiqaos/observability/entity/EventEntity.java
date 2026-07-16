@@ -2,6 +2,7 @@ package com.aiqaos.observability.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
@@ -10,6 +11,8 @@ import java.time.LocalDateTime;
 public class EventEntity extends BaseEntity {
     private String eventType;
     private String source;
+    
+    @Lob
     private String payload;
     private LocalDateTime createdAt;
 
