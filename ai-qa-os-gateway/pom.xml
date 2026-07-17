@@ -76,5 +76,37 @@
             <artifactId>ai-qa-os-reporting</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- PostgreSQL and Spring Data JPA dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Copies the repo's shared Flyway migrations onto this module's classpath at
+                 db/migration (Flyway's default classpath scan location), same as ai-qa-os-dashboard. -->
+            <resource>
+                <directory>../deployment/migration/db/migration</directory>
+                <targetPath>db/migration</targetPath>
+            </resource>
+        </resources>
+    </build>
 </project>

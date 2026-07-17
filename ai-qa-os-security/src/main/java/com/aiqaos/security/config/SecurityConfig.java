@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .frameOptions(frame -> frame.deny())
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/v1/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/v1/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**", "/api/dashboard/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)

@@ -1,6 +1,7 @@
 package com.aiqaos.observability.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ public class AgentMetricEntity extends BaseEntity {
     private Long tokensUsed;
     private Double cost;
     private boolean success = true;
+    @Column(length = 2000)
     private String errorMessage;
     private LocalDateTime recordedAt;
 

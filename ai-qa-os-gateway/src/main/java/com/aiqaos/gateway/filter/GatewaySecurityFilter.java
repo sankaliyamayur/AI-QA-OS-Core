@@ -48,7 +48,7 @@ public class GatewaySecurityFilter implements Filter {
         SecurityContextHolder.setContext(ctx);
 
         // Rate limiting
-        String userId = ctx != null ? ctx.getUserId() : "anonymous";
+        String userId = (ctx != null && ctx.getUserId() != null) ? ctx.getUserId() : "anonymous";
         if (!rateLimiter.isAllowed(userId)) {
             httpResp.setStatus(429);
             httpResp.getWriter().write("{\"error\":\"RATE_LIMIT_EXCEEDED\"}");
@@ -65,6 +65,8 @@ public class GatewaySecurityFilter implements Filter {
     private boolean isPublic(String path) {
         return path.startsWith("/actuator") ||
                path.startsWith("/swagger-ui") ||
-               path.startsWith("/v3/api-docs");
+               path.startsWith("/v3/api-docs") ||
+               path.startsWith("/api/v1") ||
+               path.startsWith("/api/dashboard");
     }
 }

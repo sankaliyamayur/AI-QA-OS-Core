@@ -9,9 +9,9 @@ import java.util.List;
 public class JwtProperties {
 
     private String secret;
-    private long expirationMs;
-    private long refreshExpirationMs;
-    private String issuer;
+    private long expirationMs = 3_600_000L; // 1 hour
+    private long refreshExpirationMs = 604_800_000L; // 7 days
+    private String issuer = "ai-qa-os";
     private List<String> allowedOrigins;
 
     public String getSecret() { return secret; }

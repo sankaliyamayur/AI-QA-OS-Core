@@ -4,10 +4,24 @@ server:
 spring:
   application:
     name: ai-qa-os-gateway
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 aiqaos:
   security:
-    database-enabled: false
+    database-enabled: true
   cloud:
     gateway:
       routes:

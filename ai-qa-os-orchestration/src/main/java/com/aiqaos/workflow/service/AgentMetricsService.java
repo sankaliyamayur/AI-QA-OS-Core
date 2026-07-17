@@ -45,7 +45,8 @@ public class AgentMetricsService {
         entity.setTokensUsed(tokensUsed);
         entity.setCost(cost);
         entity.setSuccess(success);
-        entity.setErrorMessage(errorMessage);
+        entity.setErrorMessage(errorMessage != null && errorMessage.length() > 2000
+                ? errorMessage.substring(0, 2000) : errorMessage);
         entity.setRecordedAt(LocalDateTime.now());
         observabilityEventPublisher.recordAgentMetric(entity);
     }

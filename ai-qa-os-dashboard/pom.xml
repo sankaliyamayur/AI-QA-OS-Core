@@ -71,7 +71,6 @@
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-security</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>

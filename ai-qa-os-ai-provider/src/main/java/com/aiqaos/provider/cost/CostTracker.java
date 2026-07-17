@@ -9,7 +9,6 @@ import com.aiqaos.provider.model.LLMResponse;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Component
 public class CostTracker {
@@ -26,7 +25,6 @@ public class CostTracker {
         double cost = calculateCost(providerName, resp.getModel(), resp.getUsage().getInputTokens(), resp.getUsage().getOutputTokens());
 
         LLMCostEntity entity = new LLMCostEntity();
-        entity.setId(UUID.randomUUID());
         entity.setRequestId(req.getCorrelationId());
         entity.setAgentType(req.getAgentType());
         entity.setPurpose(req.getPurpose());
