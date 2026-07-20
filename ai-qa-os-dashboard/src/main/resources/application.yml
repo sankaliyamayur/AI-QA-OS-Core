@@ -24,3 +24,15 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics
+
+aiqaos:
+  artifacts:
+    # Base directory where Playwright writes screenshots, videos, traces, and reports.
+    # Override via PLAYWRIGHT_ARTIFACTS_DIR environment variable in CI/CD.
+    base-dir: ${PLAYWRIGHT_ARTIFACTS_DIR:D:/QA AI Automation/AI-QA-OS Architecture/AI-QA-OS-Core/playwright-output}
+  playwright:
+    # Path to run-playwright.ps1 script; leave empty to use classpath resource resolution.
+    runner-script: ${PLAYWRIGHT_RUNNER_SCRIPT:}
+  dashboard:
+    # Public base URL used to construct HTTP URLs for artifact file serving.
+    base-url: ${DASHBOARD_BASE_URL:http://localhost:8090}

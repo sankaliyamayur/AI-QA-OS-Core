@@ -1,5 +1,6 @@
 package com.aiqaos.execution.engine;
 
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 public class ExecutionConfiguration {
     private ExecutionMode executionMode = ExecutionMode.SEQUENTIAL;
     private EnvironmentType environment = EnvironmentType.DEV;

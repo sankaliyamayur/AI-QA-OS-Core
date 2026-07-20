@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    /* ── Target & Module ──────────────────────────────────────────────────── */
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+
+    /* ── Type resolution ──────────────────────────────────────────────────── */
+    "types": ["node", "@playwright/test"],
+
+    /* ── Strict mode ──────────────────────────────────────────────────────── */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    /* ── Output ───────────────────────────────────────────────────────────── */
+    "outDir": "./dist",
+    "rootDir": ".",
+
+    /* ── Interop ──────────────────────────────────────────────────────────── */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    /* ── Source maps for debugging ────────────────────────────────────────── */
+    "sourceMap": true,
+
+    /* ── Skip lib checks (common for Playwright projects) ────────────────── */
+    "skipLibCheck": true
+  },
+  "include": [
+    "*.ts",
+    "tests/**/*.ts",
+    "pages/**/*.ts",
+    "fixtures/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "playwright-output"
+  ]
+}

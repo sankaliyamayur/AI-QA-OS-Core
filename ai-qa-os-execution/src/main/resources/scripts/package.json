@@ -1,0 +1,22 @@
+{
+  "name": "ai-qa-os-playwright-scripts",
+  "version": "1.0.0",
+  "description": "Playwright test execution scripts for AI-QA-OS. Invoked by the Java PlaywrightExecutionEngine via ProcessBuilder.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report playwright-output/local/chromium/html-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

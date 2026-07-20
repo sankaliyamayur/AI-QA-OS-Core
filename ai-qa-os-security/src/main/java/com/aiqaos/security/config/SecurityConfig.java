@@ -33,16 +33,30 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers
                 .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
-                .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
-                .frameOptions(frame -> frame.deny())
+                .contentSecurityPolicy(csp -> csp.policyDirectives("default-src * 'unsafe-inline' 'unsafe-eval' data: blob:"))
+                .frameOptions(frame -> frame.disable())
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/v1/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**", "/api/dashboard/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/v1/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**", "/api/dashboard/**", "/api/artifacts/**").permitAll()
                 .anyRequest().authenticated()
             )
+            .cors(cors -> cors.configure(http))
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(jwtAuthenticationFilter, RateLimitingFilter.class);
 
         return http.build();
     }
-}
+
+    @Bean
+    public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring().requestMatchers(
+            "/api/auth/**",
+            "/api/v1/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/actuator/**",
+            "/api/dashboard/**",
+            "/api/artifacts/**"
+        );
+    }
+}
