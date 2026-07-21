@@ -45,6 +45,9 @@ public class RequirementReaderStep implements WorkflowStep<WorkflowRequest, Work
             String content = reader.readRequirement(storyPath);
             RequirementContext reqContext = parser.parse(content);
 
+            // Record the resolved path so downstream steps can resolve the owning module
+            reqContext.getAdditionalMetadata().put("storyPath", storyPath);
+
             if (context.getQaWorkflowState() == null) {
                 context.setQaWorkflowState(new AutonomousQAWorkflowState());
             }

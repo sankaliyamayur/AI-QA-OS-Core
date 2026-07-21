@@ -258,10 +258,27 @@ public class AutonomousQAPipelineTest {
         ReflectionTestUtils.setField(qaAnalysisStep, "agentManager", agentManager);
         ReflectionTestUtils.setField(qaAnalysisStep, "objectMapper", mapper);
 
+        // The generation step resolves the owning module from the story path the
+        // pipeline was started with, then persists the generated cases.
+        com.aiqaos.core.entity.ModuleEntity module = new com.aiqaos.core.entity.ModuleEntity();
+        module.setId("admin-login");
+        module.setRequirementPath("US-001.md");
+
+        com.aiqaos.core.repository.ModuleRepository moduleRepo =
+            org.mockito.Mockito.mock(com.aiqaos.core.repository.ModuleRepository.class);
+        org.mockito.Mockito.when(moduleRepo.findAll()).thenReturn(List.of(module));
+
+        com.aiqaos.core.repository.TestCaseRepository testCaseRepo =
+            org.mockito.Mockito.mock(com.aiqaos.core.repository.TestCaseRepository.class);
+        org.mockito.Mockito.when(testCaseRepo.findById(org.mockito.ArgumentMatchers.anyString()))
+            .thenReturn(java.util.Optional.empty());
+
         testCaseGenerationStep = new TestCaseGenerationStep();
         ReflectionTestUtils.setField(testCaseGenerationStep, "agentManager", agentManager);
         ReflectionTestUtils.setField(testCaseGenerationStep, "objectMapper", mapper);
         ReflectionTestUtils.setField(testCaseGenerationStep, "responseValidator", responseValidator);
+        ReflectionTestUtils.setField(testCaseGenerationStep, "testCaseRepo", testCaseRepo);
+        ReflectionTestUtils.setField(testCaseGenerationStep, "moduleRepo", moduleRepo);
 
         scriptGenerationStep = new ScriptGenerationStep();
         ReflectionTestUtils.setField(scriptGenerationStep, "agentManager", agentManager);

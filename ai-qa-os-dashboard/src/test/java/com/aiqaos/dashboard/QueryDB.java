@@ -50,12 +50,23 @@ public class QueryDB {
                 }
             }
             
-            System.out.println("\n--- USERS IN DB ---");
-            rs = stmt.executeQuery("SELECT id, username, email, enabled, account_locked, active, password_hash FROM security_users");
+            System.out.println("\n--- PROMPT TEMPLATES ---");
+            rs = stmt.executeQuery("SELECT * FROM prompt_templates");
             meta = rs.getMetaData();
             cols = meta.getColumnCount();
             while (rs.next()) {
-                System.out.println("User:");
+                System.out.println("Template:");
+                for (int i = 1; i <= cols; i++) {
+                    System.out.println("  " + meta.getColumnName(i) + ": " + rs.getString(i));
+                }
+            }
+            
+            System.out.println("\n--- PROMPT VERSIONS ---");
+            rs = stmt.executeQuery("SELECT template_id, version_tag FROM prompt_versions");
+            meta = rs.getMetaData();
+            cols = meta.getColumnCount();
+            while (rs.next()) {
+                System.out.println("Version:");
                 for (int i = 1; i <= cols; i++) {
                     System.out.println("  " + meta.getColumnName(i) + ": " + rs.getString(i));
                 }

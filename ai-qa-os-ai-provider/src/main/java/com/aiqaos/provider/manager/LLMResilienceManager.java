@@ -16,11 +16,16 @@ public class LLMResilienceManager {
         try {
             return primary.generate(request);
         } catch (Exception e) {
-            log.warn("Primary provider {} failed. Falling back to {}...", primary.getProviderName(), fallback.getProviderName());
+            // Log the cause, not just the fact — callers only ever see the wrapper message,
+            // so an unlogged cause here is invisible everywhere downstream.
+            log.warn("Primary provider {} failed, falling back to {}: {}",
+                    primary.getProviderName(), fallback.getProviderName(), e.toString(), e);
             try {
                 return fallback.generate(request);
             } catch (Exception ex) {
-                throw new ProviderException("Fallback provider failed as well", ex);
+                log.error("Fallback provider {} also failed: {}", fallback.getProviderName(), ex.toString(), ex);
+                throw new ProviderException(
+                        "Fallback provider failed as well: " + ex.getMessage(), ex);
             }
         }
     }

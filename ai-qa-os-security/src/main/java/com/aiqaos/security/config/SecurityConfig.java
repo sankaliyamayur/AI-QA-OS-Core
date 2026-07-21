@@ -56,7 +56,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/actuator/**",
             "/api/dashboard/**",
-            "/api/artifacts/**"
+            "/api/artifacts/**",
+            "/error"
         );
     }
 }

@@ -38,6 +38,9 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
     @Autowired
     private com.aiqaos.execution.repository.ExecutionArtifactRepository artifactRepo;
 
+    @Autowired
+    private com.aiqaos.core.repository.TestCaseRepository testCaseRepo;
+
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ExecutionStep.class);
 
     @Override
@@ -182,6 +185,43 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
                         artifactRepo.save(art);
                         log.info("[ExecutionStep] Saved Playwright artifacts in DB: TC={}, Screenshot={}, Video={}, Run=#{}",
                                  art.getTestCaseId(), art.getScreenshotPath() != null, art.getVideoPath() != null, art.getRunNumber());
+                                 
+                        // Update the TestCaseEntity with latest execution details
+                        try {
+                            testCaseRepo.findById(art.getTestCaseId()).ifPresent(tc -> {
+                                tc.setLastRun(java.time.LocalDateTime.now());
+                                String dateStr = java.time.LocalDate.now().toString().replace("-", ".");
+                                tc.setBuild("Bld-" + dateStr + "-" + String.format("%02d", art.getRunNumber()));
+                                tc.setStatus(execResult.getStatus() != null ? execResult.getStatus() : (execResult.isSuccess() ? "PASSED" : "FAILED"));
+                                tc.setDuration(execResult.getDuration() + " ms");
+                                
+                                // Update timeline steps status based on execution result
+                                if (tc.getSteps() != null && !tc.getSteps().isEmpty()) {
+                                    java.util.List<java.util.Map<String, Object>> steps = tc.getSteps();
+                                    boolean isSuccess = "PASSED".equalsIgnoreCase(tc.getStatus());
+                                    
+                                    for (int i = 0; i < steps.size(); i++) {
+                                        java.util.Map<String, Object> step = steps.get(i);
+                                        if (isSuccess) {
+                                            step.put("status", "PASS");
+                                        } else {
+                                            if (i == steps.size() - 1) {
+                                                step.put("status", "FAIL");
+                                                step.put("details", execResult.getErrorMessage() != null ? execResult.getErrorMessage() : "Execution failed at this step");
+                                            } else {
+                                                step.put("status", "PASS");
+                                            }
+                                        }
+                                    }
+                                    tc.setSteps(steps);
+                                }
+                                
+                                testCaseRepo.save(tc);
+                                log.info("[ExecutionStep] Updated TestCaseEntity {} with status {} and run time", tc.getId(), tc.getStatus());
+                            });
+                        } catch (Exception e) {
+                            log.error("[ExecutionStep] Failed to update TestCaseEntity {}: {}", art.getTestCaseId(), e.getMessage());
+                        }
                     }
                 } catch (Exception ex) {
                     log.error("[ExecutionStep] Failed to save ExecutionArtifacts: {}", ex.getMessage(), ex);

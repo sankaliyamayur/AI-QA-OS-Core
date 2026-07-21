@@ -4,8 +4,7 @@ import com.aiqaos.provider.contract.LLMProvider;
 import com.aiqaos.provider.contract.StreamingLLMProvider;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
-import com.aiqaos.provider.model.TokenUsage;
-import com.aiqaos.provider.provider.MockLLMResponses;
+import com.aiqaos.provider.exception.ProviderException;
 import com.aiqaos.security.secret.SecretManager;
 import org.springframework.stereotype.Component;
 
@@ -23,29 +22,23 @@ public class ClaudeProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public LLMResponse generate(LLMRequest request) {
-        String key = secretManager.getSecret("CLAUDE_API_KEY");
-        long start = System.currentTimeMillis();
-        String responseText = MockLLMResponses.json("Claude");
-        long duration = System.currentTimeMillis() - start;
-
-        return new LLMResponse(
-            responseText, 
-            "claude-3-5-sonnet", 
-            new TokenUsage(120, 180), 
-            duration
-        );
+        throw new ProviderException("Claude provider is not wired to a real API yet");
     }
 
     @Override
     public void stream(LLMRequest request, Consumer<String> tokenConsumer) {
-        tokenConsumer.accept("Claude stream response chunk");
+        throw new ProviderException("Claude provider is not wired to a real API yet");
     }
 
     @Override
     public String getProviderName() { return "Claude"; }
 
+    /**
+     * Reports unavailable until this provider makes a real API call, so that
+     * ModelRouter never selects it over a genuinely wired provider.
+     */
     @Override
-    public boolean isAvailable() { return true; }
+    public boolean isAvailable() { return false; }
 
     @Override
     public boolean supports(ProviderCapability capability) {

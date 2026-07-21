@@ -4,8 +4,7 @@ import com.aiqaos.provider.contract.LLMProvider;
 import com.aiqaos.provider.contract.StreamingLLMProvider;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
-import com.aiqaos.provider.model.TokenUsage;
-import com.aiqaos.provider.provider.MockLLMResponses;
+import com.aiqaos.provider.exception.ProviderException;
 import org.springframework.stereotype.Component;
 
 import com.aiqaos.provider.contract.ProviderCapability;
@@ -16,28 +15,23 @@ public class OllamaProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public LLMResponse generate(LLMRequest request) {
-        long start = System.currentTimeMillis();
-        String responseText = MockLLMResponses.json("Ollama");
-        long duration = System.currentTimeMillis() - start;
-
-        return new LLMResponse(
-            responseText, 
-            "llama3", 
-            new TokenUsage(150, 200), 
-            duration
-        );
+        throw new ProviderException("Ollama provider is not wired to a real API yet");
     }
 
     @Override
     public void stream(LLMRequest request, Consumer<String> tokenConsumer) {
-        tokenConsumer.accept("Ollama stream response chunk");
+        throw new ProviderException("Ollama provider is not wired to a real API yet");
     }
 
     @Override
     public String getProviderName() { return "Ollama"; }
 
+    /**
+     * Reports unavailable until this provider makes a real API call, so that
+     * ModelRouter never selects it over a genuinely wired provider.
+     */
     @Override
-    public boolean isAvailable() { return true; }
+    public boolean isAvailable() { return false; }
 
     @Override
     public boolean supports(ProviderCapability capability) {

@@ -12,11 +12,10 @@ import com.aiqaos.core.enums.AgentType;
 import com.aiqaos.core.contract.AgentRequest;
 import com.aiqaos.core.contract.AgentResponse;
 import com.aiqaos.core.context.AgentContext;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import java.util.List;
-import java.util.Map;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -63,17 +62,13 @@ public class QAAnalysisStep implements WorkflowStep<WorkflowRequest, WorkflowRes
             }
 
             // 3. Parse and convert output
-            QAAnalysisResult analysisResult;
-            try {
-                analysisResult = objectMapper.readValue(agentRes.getContent(), QAAnalysisResult.class);
-            } catch (Exception e) {
-                // Fallback in case LLM returns text instead of strict JSON
-                analysisResult = new QAAnalysisResult();
-                analysisResult.setAnalysisSummary(agentRes.getContent());
-                analysisResult.setIdentifiedScenarios(List.of("Verify login details", "Forgot password workflow"));
-                analysisResult.setRiskMatrix(Map.of("Authentication Bypass", "HIGH"));
-                analysisResult.setReadyForTestDesign(true);
-            }
+            // The analysis must come from the agent — never substituted with canned scenarios,
+            // otherwise the whole downstream suite is generated from data nobody produced.
+            // Tolerate extra fields the model may add, but never invent the analysis itself.
+            QAAnalysisResult analysisResult = objectMapper
+                .readerFor(QAAnalysisResult.class)
+                .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .readValue(agentRes.getContent());
 
             analysisResult.setWorkflowId(request.getMetadata().getWorkflowId() != null ? 
                 request.getMetadata().getWorkflowId().toString() : "workflow-default");

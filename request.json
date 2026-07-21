@@ -1,0 +1,8 @@
+{
+  "correlationId": "a1c1d1e1-b1c1-d1e1-a1b1-c1d1e1a1b1c1",
+  "userId": "tester-1",
+  "workflowName": "AUTONOMOUS_QA_PIPELINE",
+  "parameters": {
+    "requirementPath": "d:/QA AI Automation/AI-QA-OS Architecture/AI-QA-OS-Core/resources/user-stories/Login/US-001.md"
+  }
+}

@@ -1,3 +1,7 @@
 target/
 .idea/
 *.iml
+playwright-output/
+*.log
+scratch/
+test-*.ps1

@@ -11,6 +11,8 @@ import com.aiqaos.provider.provider.openai.OpenAIProvider;
 import com.aiqaos.provider.router.ModelRouter;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class LLMProviderManager {
 
@@ -42,7 +44,7 @@ public class LLMProviderManager {
         String targetProviderName = modelRouter.routeModel(request.getPurpose());
         
         LLMProvider primary = selectProvider(targetProviderName);
-        LLMProvider fallback = selectProvider(targetProviderName.equals("Claude") ? "OpenAI" : "Gemini");
+        LLMProvider fallback = selectFallback(primary);
 
         LLMResponse response = resilienceManager.executeWithFallback(primary, fallback, request);
 
@@ -59,5 +61,19 @@ public class LLMProviderManager {
             case "Claude" -> { return claudeProvider; }
             default       -> { return geminiProvider; }
         }
+    }
+
+    /**
+     * Picks a configured provider other than the primary. Falling back to the same
+     * provider re-runs the identical call with the identical credentials, which cannot
+     * recover from the failure that triggered the fallback in the first place.
+     */
+    private LLMProvider selectFallback(LLMProvider primary) {
+        for (LLMProvider candidate : List.of(geminiProvider, openAIProvider, claudeProvider)) {
+            if (candidate != primary && candidate.isAvailable()) {
+                return candidate;
+            }
+        }
+        return primary;
     }
 }

@@ -4,6 +4,7 @@ import com.aiqaos.provider.contract.LLMProvider;
 import com.aiqaos.provider.contract.ProviderCapability;
 import com.aiqaos.provider.contract.StreamingLLMProvider;
 import com.aiqaos.provider.exception.ProviderException;
+import com.aiqaos.provider.key.ApiKeyPool;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
 import com.aiqaos.provider.model.TokenUsage;
@@ -13,11 +14,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.function.Consumer;
 
 @Component
@@ -30,9 +34,14 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
 
-    public OpenAIProvider(SecretManager secretManager, ObjectMapper objectMapper) {
+    private final ApiKeyPool keyPool;
+
+    public OpenAIProvider(SecretManager secretManager,
+                          ObjectMapper objectMapper,
+                          @Value("${aiqaos.provider.openai.key-cooldown-seconds:300}") long keyCooldownSeconds) {
         this.secretManager = secretManager;
         this.objectMapper = objectMapper;
+        this.keyPool = new ApiKeyPool(secretManager, "OPENAI_API_KEY", Duration.ofSeconds(keyCooldownSeconds));
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(10_000);
@@ -42,11 +51,41 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public LLMResponse generate(LLMRequest request) {
-        String key = secretManager.getSecret("OPENAI_API_KEY");
-        if (key == null || key.isBlank()) {
+        List<String> keys = keyPool.availableKeys();
+        if (keys.isEmpty()) {
             throw new ProviderException("OPENAI_API_KEY is not configured");
         }
 
+        ProviderException lastQuotaFailure = null;
+
+        // Rotate only past keys that are themselves the problem; other errors are a
+        // property of the request or the service and would fail on every key alike.
+        for (String key : keys) {
+            try {
+                return generateWithKey(request, key);
+            } catch (RestClientResponseException e) {
+                int status = e.getStatusCode().value();
+                if (status == 429 || status == 403 || status == 401) {
+                    keyPool.markExhausted(key);
+                    lastQuotaFailure = new ProviderException(
+                            "OpenAI key " + ApiKeyPool.maskKey(key) + " rejected with status "
+                                    + status + ": " + e.getResponseBodyAsString(), e);
+                    continue;
+                }
+                throw new ProviderException(
+                        "OpenAI API call failed with status " + status + ": " + e.getResponseBodyAsString(), e);
+            } catch (RestClientException e) {
+                throw new ProviderException("OpenAI API call failed: " + e.getMessage(), e);
+            }
+        }
+
+        throw new ProviderException(
+                "All " + keys.size() + " OpenAI key(s) exhausted. Last failure: "
+                        + (lastQuotaFailure == null ? "unknown" : lastQuotaFailure.getMessage()),
+                lastQuotaFailure);
+    }
+
+    private LLMResponse generateWithKey(LLMRequest request, String key) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", DEFAULT_MODEL);
         body.put("temperature", request.getTemperature());
@@ -63,29 +102,24 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
         userMessage.put("role", "user");
         userMessage.put("content", request.getPrompt());
 
+        // Rest client exceptions deliberately propagate so the caller can inspect the
+        // status code and decide whether another key is worth trying.
         long start = System.currentTimeMillis();
-        try {
-            JsonNode responseBody = restClient.post()
-                .uri(CHAT_COMPLETIONS_URL)
-                .header("Authorization", "Bearer " + key)
-                .header("Content-Type", "application/json")
-                .body(body)
-                .retrieve()
-                .body(JsonNode.class);
-            long duration = System.currentTimeMillis() - start;
+        JsonNode responseBody = restClient.post()
+            .uri(CHAT_COMPLETIONS_URL)
+            .header("Authorization", "Bearer " + key)
+            .header("Content-Type", "application/json")
+            .body(body)
+            .retrieve()
+            .body(JsonNode.class);
+        long duration = System.currentTimeMillis() - start;
 
-            String content = responseBody.path("choices").path(0).path("message").path("content").asText();
-            long promptTokens = responseBody.path("usage").path("prompt_tokens").asLong(0);
-            long completionTokens = responseBody.path("usage").path("completion_tokens").asLong(0);
-            String model = responseBody.path("model").asText(DEFAULT_MODEL);
+        String content = responseBody.path("choices").path(0).path("message").path("content").asText();
+        long promptTokens = responseBody.path("usage").path("prompt_tokens").asLong(0);
+        long completionTokens = responseBody.path("usage").path("completion_tokens").asLong(0);
+        String model = responseBody.path("model").asText(DEFAULT_MODEL);
 
-            return new LLMResponse(content, model, new TokenUsage(promptTokens, completionTokens), duration);
-        } catch (RestClientResponseException e) {
-            throw new ProviderException(
-                "OpenAI API call failed with status " + e.getStatusCode().value() + ": " + e.getResponseBodyAsString(), e);
-        } catch (RestClientException e) {
-            throw new ProviderException("OpenAI API call failed: " + e.getMessage(), e);
-        }
+        return new LLMResponse(content, model, new TokenUsage(promptTokens, completionTokens), duration);
     }
 
     @Override
@@ -99,8 +133,7 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
 
     @Override
     public boolean isAvailable() {
-        String key = secretManager.getSecret("OPENAI_API_KEY");
-        return key != null && !key.isBlank();
+        return keyPool.hasKeys();
     }
 
     @Override

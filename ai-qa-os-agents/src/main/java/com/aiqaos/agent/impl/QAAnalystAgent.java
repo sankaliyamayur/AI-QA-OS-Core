@@ -142,7 +142,7 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
 
                 if (responseValidator != null) {
                     java.lang.reflect.Method validateMethod = responseValidator.getClass().getMethod("validateAndNormalize", AgentType.class, String.class);
-                    validatedJson = (String) validateMethod.invoke(responseValidator, AgentType.BUG_ANALYZER, llmRes.getText());
+                    validatedJson = (String) validateMethod.invoke(responseValidator, AgentType.QA_ENGINEER, llmRes.getText());
                 } else {
                     // Direct local normalization stub for testing context where spring context is not active
                     String rawJson = llmRes.getText();
