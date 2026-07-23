@@ -33,6 +33,7 @@
         <module>ai-qa-os-dashboard</module>
         <module>ai-qa-os-agents-runtime</module>
         <module>ai-qa-os-ai-provider</module>
+        <module>ai-qa-os-eval</module>
     </modules>
 
     <properties>
@@ -42,7 +43,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <langchain4j.version>0.31.0</langchain4j.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <lombok.version>1.18.34</lombok.version>
     </properties>
@@ -62,14 +62,6 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <!-- LangChain4j -->
-            <dependency>
-                <groupId>dev.langchain4j</groupId>
-                <artifactId>langchain4j-bom</artifactId>
-                <version>${langchain4j.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

@@ -1,9 +1,9 @@
 package com.aiqaos.dashboard.controller;
 
 import com.aiqaos.observability.repository.LLMCostRepository;
-import com.aiqaos.workflow.entity.WorkflowExecutionEntity;
-import com.aiqaos.workflow.repository.WorkflowExecutionRepository;
-import com.aiqaos.workflow.service.WorkflowExecutionService;
+import com.aiqaos.orchestration.entity.WorkflowExecutionEntity;
+import com.aiqaos.orchestration.repository.WorkflowExecutionRepository;
+import com.aiqaos.orchestration.service.WorkflowExecutionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

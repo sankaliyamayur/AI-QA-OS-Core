@@ -1,7 +1,7 @@
 package com.aiqaos.dashboard.controller;
 
-import com.aiqaos.workflow.model.BugAnalysisDTO;
-import com.aiqaos.workflow.service.BugAnalyticsService;
+import com.aiqaos.orchestration.model.BugAnalysisDTO;
+import com.aiqaos.orchestration.service.BugAnalyticsService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

@@ -1,7 +1,7 @@
 package com.aiqaos.dashboard.controller;
 
-import com.aiqaos.workflow.model.ExecutionComparisonDTO;
-import com.aiqaos.workflow.service.WorkflowExecutionService;
+import com.aiqaos.orchestration.model.ExecutionComparisonDTO;
+import com.aiqaos.orchestration.service.WorkflowExecutionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

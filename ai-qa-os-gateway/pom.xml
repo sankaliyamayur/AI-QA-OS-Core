@@ -76,6 +76,12 @@
             <artifactId>ai-qa-os-reporting</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- OBS-1: TracingFilter uses TraceContextPropagator directly (was transitive via orchestration). -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-observability</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- PostgreSQL and Spring Data JPA dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -93,6 +99,11 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

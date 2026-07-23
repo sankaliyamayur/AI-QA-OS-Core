@@ -1,13 +1,19 @@
 server:
   port: 8082
 
+# MNT-6 + OBS-1: surface the MDC correlationId and traceId on every log line (log↔trace correlation).
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-}] [%X{traceId:-}]"
+
 spring:
   application:
     name: ai-qa-os-gateway
   datasource:
     url: jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple
-    username: postgres
-    password: password
+    # SEC-2: credentials injected from env/secret store; no committed default for the password.
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -19,9 +25,27 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+# SEC-2: JWT signing secret injected from env/secret store (no committed value).
+# Required when aiqaos.security.enabled=true; otherwise a non-persistent ephemeral key is used.
+security:
+  jwt:
+    secret: ${JWT_SECRET:}
+
 aiqaos:
+  provider:
+    gemini:
+      model: gemini-3.6-flash
   security:
+    # SEC-1: deny-by-default authentication enforcement. Override to false (e.g. via
+    # AIQAOS_SECURITY_ENABLED=false) for open local development.
+    enabled: ${AIQAOS_SECURITY_ENABLED:true}
     database-enabled: true
+    # SEC-1: bootstrap admin is created only if absent and a password is supplied here (inject via
+    # env/secret, never commit a real value — full secret management is SEC-2).
+    bootstrap-admin:
+      username: ${AIQAOS_BOOTSTRAP_ADMIN_USERNAME:admin}
+      email: ${AIQAOS_BOOTSTRAP_ADMIN_EMAIL:admin@aiqaos.local}
+      password: ${AIQAOS_BOOTSTRAP_ADMIN_PASSWORD:}
   cloud:
     gateway:
       routes:

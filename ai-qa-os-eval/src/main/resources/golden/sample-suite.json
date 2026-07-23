@@ -1,0 +1,19 @@
+{
+  "suite": "sample-suite",
+  "cases": [
+    {
+      "id": "greeting",
+      "input": "Reply with a polite greeting that contains the word Hello.",
+      "expectedOutput": null,
+      "criteria": ["Hello"],
+      "tags": ["smoke"]
+    },
+    {
+      "id": "json-shape",
+      "input": "Return a JSON object with the fields name and status.",
+      "expectedOutput": null,
+      "criteria": ["name", "status"],
+      "tags": ["smoke"]
+    }
+  ]
+}

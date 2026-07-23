@@ -1,0 +1,26 @@
+# SEC-5 — gitleaks configuration.
+# Extends the default rule set and allowlists KNOWN NON-SECRET values so the gate is meaningful
+# without flagging labeled test-only keys, deployment dummies, or vendored dependencies.
+title = "AI-QA-OS gitleaks configuration (SEC-5)"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known test-only values and vendored dependencies — no real secrets."
+paths = [
+  # SEC-2: labeled test-only JWT signing keys (never used in a real environment)
+  '''(.*/)?application-test\.yml$''',
+  # SEC-2: base64 DUMMY values, explicitly replaced via Vault/CI in production
+  '''deployment/kubernetes/secrets\.yaml$''',
+  # SEC-2: documents required env vars only (no values)
+  '''(.*/)?\.env\.example$''',
+  # ORG-1: vendored Playwright/TypeScript toolchain (example keys/fixtures cause noise)
+  '''.*/node_modules/.*''',
+]
+regexes = [
+  # The exact SEC-2 test-only signing key string
+  '''test-only-non-production-hmac-signing-key-do-not-use-in-any-real-environment''',
+  # JwtTokenProviderTest base64 test key (decodes to "this-is-a-secure-256-bit-signing-key-for-testing-module")
+  '''dGhpcy1pcy1hLXNlY3VyZS0yNTYtYml0LXNpZ25pbmcta2V5LWZvci10ZXN0aW5nLW1vZHVsZQ==''',
+]

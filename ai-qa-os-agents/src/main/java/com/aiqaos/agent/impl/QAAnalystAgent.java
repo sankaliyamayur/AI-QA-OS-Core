@@ -135,7 +135,7 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
                 String validatedJson = null;
                 try {
                     if (responseValidator == null && applicationContext != null) {
-                        Class<?> validatorClass = Class.forName("com.aiqaos.workflow.validation.LLMResponseValidator");
+                        Class<?> validatorClass = Class.forName("com.aiqaos.orchestration.validation.LLMResponseValidator");
                         responseValidator = applicationContext.getBean(validatorClass);
                     }
                 } catch (Exception ignored) {}

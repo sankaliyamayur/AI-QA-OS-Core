@@ -3,10 +3,15 @@ name: CI/CD Deployment Platform
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # PE-1: expose the LLM key (if configured) as env so the live gate below can conditionally run.
+    env:
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK 21
@@ -15,22 +20,62 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-    - name: Build with Maven
-      run: mvn clean compile -B
+    # MNT-1: run the test suite as a real gate (was `mvn clean compile -B`, which skipped all tests).
+    # This includes PE-1's always-on prompt-eval gate (baseline integrity + benchmark machinery).
+    - name: Build & Test with Maven
+      run: mvn clean verify -B
+    # PE-1: live prompt-quality regression gate. Runs only where an LLM key is configured; the
+    # PromptBenchmarkLiveTest is otherwise skipped by its @EnabledIfEnvironmentVariable condition.
+    - name: Prompt evaluation (live benchmark)
+      if: ${{ env.LLM_API_KEY != '' }}
+      env:
+        AIQAOS_PROMPT_EVAL_LIVE: 'true'
+      run: mvn -pl ai-qa-os-eval -am test -B
 
   docker-scan-deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
+    # MNT-2: allow GITHUB_TOKEN to push to GHCR.
+    permissions:
+      contents: read
+      packages: write
     steps:
     - uses: actions/checkout@v4
+    # MNT-2: resolve a real image ref — repo variable IMAGE_REGISTRY, else ghcr.io/<owner> (lowercased).
+    - name: Resolve image reference
+      id: img
+      run: |
+        REG="${{ vars.IMAGE_REGISTRY }}"
+        if [ -z "$REG" ]; then
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REG="ghcr.io/$OWNER"
+        fi
+        echo "image=$REG/ai-qa-os-gateway" >> "$GITHUB_OUTPUT"
+        echo "registry=${REG%%/*}" >> "$GITHUB_OUTPUT"
     - name: Build Docker Image
       run: |
-        docker build -t ghcr.io/company/ai-qa-os-gateway:latest -f deployment/docker/gateway.Dockerfile .
+        docker build \
+          -t ${{ steps.img.outputs.image }}:latest \
+          -t ${{ steps.img.outputs.image }}:${{ github.sha }} \
+          -f deployment/docker/gateway.Dockerfile .
     - name: Trivy Image Vulnerability Scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'ghcr.io/company/ai-qa-os-gateway:latest'
+        image-ref: '${{ steps.img.outputs.image }}:${{ github.sha }}'
         format: 'table'
         exit-code: '1'
         ignore-unfixed: true
         severity: 'CRITICAL,HIGH'
+    # MNT-2: publish only on a clean scan (Trivy fails the job above on findings) and only on main pushes.
+    - name: Log in to container registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ steps.img.outputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Push image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        docker push ${{ steps.img.outputs.image }}:latest
+        docker push ${{ steps.img.outputs.image }}:${{ github.sha }}

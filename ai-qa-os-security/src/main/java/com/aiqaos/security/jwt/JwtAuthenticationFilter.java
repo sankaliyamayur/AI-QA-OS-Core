@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -15,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import org.springframework.beans.factory.ObjectProvider;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -44,8 +45,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userRepository != null) {
                     UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
                     if (user != null && user.isEnabled() && !user.isAccountLocked()) {
+                        // SEC-1: authenticated principals carry a baseline ROLE_USER authority.
+                        // Fine-grained role/permission binding is deferred (no user->role model yet).
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                user, null, new ArrayList<>() // Authorities bound here later in dynamic RBAC
+                                user, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
                         );
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -56,7 +59,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         username = userId;
                     }
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            username, null, new ArrayList<>()
+                            username, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
                     );
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);

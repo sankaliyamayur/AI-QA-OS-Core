@@ -2,8 +2,8 @@ package com.aiqaos.dashboard.live;
 
 import com.aiqaos.observability.entity.LLMCostEntity;
 import com.aiqaos.observability.repository.LLMCostRepository;
-import com.aiqaos.workflow.entity.WorkflowExecutionEntity;
-import com.aiqaos.workflow.repository.WorkflowExecutionRepository;
+import com.aiqaos.orchestration.entity.WorkflowExecutionEntity;
+import com.aiqaos.orchestration.repository.WorkflowExecutionRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

@@ -1,0 +1,7 @@
+{
+  "suite" : "sample-suite",
+  "caseScores" : {
+    "greeting" : 0.5,
+    "json-shape" : 0.75
+  }
+}

@@ -1,7 +1,7 @@
 package com.aiqaos.dashboard.controller;
 
-import com.aiqaos.workflow.model.ExecutionHistoryDTO;
-import com.aiqaos.workflow.service.WorkflowExecutionService;
+import com.aiqaos.orchestration.model.ExecutionHistoryDTO;
+import com.aiqaos.orchestration.service.WorkflowExecutionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;

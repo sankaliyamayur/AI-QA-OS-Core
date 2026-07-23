@@ -10,3 +10,13 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+
+aiqaos:
+  security:
+    # SEC-1: keep the dashboard slice/integration tests on the permissive chain.
+    enabled: false
+
+security:
+  jwt:
+    # SEC-2: test-only deterministic signing key. NOT a real secret.
+    secret: test-only-non-production-hmac-signing-key-do-not-use-in-any-real-environment

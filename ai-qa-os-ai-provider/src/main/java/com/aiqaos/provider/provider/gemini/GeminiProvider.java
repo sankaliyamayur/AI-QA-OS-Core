@@ -35,7 +35,7 @@ public class GeminiProvider implements LLMProvider, StreamingLLMProvider {
     private final RestClient restClient;
 
     /** Overridable so a retired model never requires a code change. */
-    @Value("${aiqaos.provider.gemini.model:gemini-2.5-flash}")
+    @Value("${aiqaos.provider.gemini.model:gemini-3.5-flash}")
     private String model;
 
     /**

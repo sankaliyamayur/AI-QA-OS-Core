@@ -55,6 +55,25 @@ try {
     exit 2
 }
 
+# --- ORG-1: restore Playwright dependencies on demand ---
+# node_modules is no longer committed; install reproducibly from package-lock.json on first run.
+$NodeModulesPath = Join-Path $ScriptRoot "node_modules"
+if (-not (Test-Path $NodeModulesPath)) {
+    Write-Output "[INFO] node_modules not found - running 'npm ci' (first-run dependency install)..."
+    Push-Location $ScriptRoot
+    try {
+        & npm ci
+        $npmExit = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+    if ($npmExit -ne 0) {
+        Write-Error "[ERROR] 'npm ci' failed (exit $npmExit). Cannot run Playwright."
+        exit 2
+    }
+    Write-Output "[INFO] Dependencies installed."
+}
+
 # ── Resolve output directory for this execution/browser combination ───────────
 $OutputDir = Join-Path (Join-Path $ArtifactsDir $ExecutionId) $Browser
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null

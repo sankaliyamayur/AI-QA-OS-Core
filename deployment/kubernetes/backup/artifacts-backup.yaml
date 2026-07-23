@@ -1,0 +1,40 @@
+# ENT-5: nightly artifact-tree backup -> object storage, plus a note on retention.
+# TEMPLATE — not runnable without a cluster + object-storage credentials (deferred, ENT-5 §0.3).
+# Once the object-storage ArtifactStore is the primary store (aiqaos.artifacts.store=object), the
+# execution workers write artifacts to object storage directly and this sync is only needed for the
+# legacy local PVC. Age-based purge is handled in-app by ArtifactRetentionService (opt-in), or by a
+# bucket lifecycle rule (FI-ENT5-C).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: artifacts-backup
+  namespace: ai-qa-os
+spec:
+  schedule: "0 3 * * *"            # daily 03:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: artifacts-sync
+              image: amazon/aws-cli:2.17.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - >
+                  set -e;
+                  echo "Sync the artifact tree to object storage";
+                  aws s3 sync /playwright-output "$BACKUP_BUCKET" --only-show-errors;
+              env:
+                - name: BACKUP_BUCKET
+                  value: s3://REPLACE-ME/artifacts
+              volumeMounts:
+                - name: artifacts
+                  mountPath: /playwright-output
+          volumes:
+            - name: artifacts
+              persistentVolumeClaim:
+                claimName: artifacts-pvc   # match the execution artifact volume

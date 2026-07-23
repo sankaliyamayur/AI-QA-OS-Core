@@ -1,8 +1,9 @@
 spring:
   datasource:
     url: jdbc:postgresql://prod-db-host:5432/ai_qa_os_prod
-    username: postgres
-    password: 
+    # SEC-2: injected from env/secret store; no committed value.
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

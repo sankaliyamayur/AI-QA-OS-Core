@@ -1,7 +1,7 @@
 package com.aiqaos.dashboard.controller;
 
 import com.aiqaos.dashboard.dto.AgentMetricDTO;
-import com.aiqaos.workflow.service.AgentMetricsService;
+import com.aiqaos.orchestration.service.AgentMetricsService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

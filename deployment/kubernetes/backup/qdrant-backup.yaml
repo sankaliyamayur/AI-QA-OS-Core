@@ -1,0 +1,32 @@
+# ENT-5: nightly Qdrant (vector store) snapshot -> object storage.
+# TEMPLATE — not runnable without a cluster + object-storage credentials (deferred, ENT-5 §0.3).
+# Adjust the Qdrant service name/port and collection to match the deployed vector store.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: qdrant-backup
+  namespace: ai-qa-os
+spec:
+  schedule: "30 2 * * *"           # daily 02:30
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: qdrant-snapshot
+              image: curlimages/curl:8.8.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - >
+                  set -e;
+                  echo "Trigger a Qdrant snapshot via its snapshot API";
+                  curl -sf -X POST "http://qdrant-service:6333/snapshots";
+                  echo "Then download the snapshot and upload it to $BACKUP_BUCKET using the object-storage secret";
+              env:
+                - name: BACKUP_BUCKET
+                  value: s3://REPLACE-ME/qdrant

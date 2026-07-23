@@ -20,17 +20,10 @@ Ensure the output is valid JSON.
       "priority": "High",
       "type": "Positive",
       "steps": [
-        {
-          "stepNumber": 1,
-          "action": "Open the application",
-          "expectedResult": "Application loads"
-        },
-        {
-          "stepNumber": 2,
-          "action": "Perform action",
-          "expectedResult": "Action succeeds"
-        }
-      ]
+        "Open the application",
+        "Perform action"
+      ],
+      "expectedResult": "Application loads and Action succeeds"
     }
   ]
 }

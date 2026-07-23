@@ -32,4 +32,17 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <!-- ORG-1: never bundle the vendored Playwright node_modules into the JAR.
+                         It is restored on demand via `npm ci` from the committed package-lock.json. -->
+                    <exclude>scripts/node_modules/**</exclude>
+                </excludes>
+            </resource>
+        </resources>
+    </build>
 </project>

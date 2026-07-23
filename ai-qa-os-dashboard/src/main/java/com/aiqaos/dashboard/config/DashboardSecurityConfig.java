@@ -1,5 +1,7 @@
 package com.aiqaos.dashboard.config;
 
+import com.aiqaos.security.config.SecurityHeaders;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -27,13 +29,21 @@ import java.util.List;
 @Configuration
 public class DashboardSecurityConfig {
 
+    /** SEC-4: overrides the strict default CSP when set; blank keeps {@link SecurityHeaders#STRICT_CSP}. */
+    @Value("${aiqaos.security.csp:}")
+    private String csp;
+
     /**
      * High-priority security filter chain that permits dashboard and artifact
      * endpoints. Does NOT add JWT or rate-limiting filters, so no token is needed.
+     *
+     * <p>SEC-4: this chain serves {@code /api/artifacts/**} — the XSS/clickjacking surface — so it
+     * now emits the hardened {@link SecurityHeaders} policy, which it previously lacked entirely.
      */
     @Bean
     @Order(1)
     public SecurityFilterChain dashboardFilterChain(HttpSecurity http) throws Exception {
+        SecurityHeaders.apply(http, csp);
         http
             .securityMatcher(
                 "/api/dashboard/**",

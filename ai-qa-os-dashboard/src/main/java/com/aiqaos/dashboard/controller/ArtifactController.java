@@ -159,6 +159,18 @@ public class ArtifactController {
             return ResponseEntity.notFound().build();
         }
 
+        // ── SEC-4: real-path check — a symlink inside the base must not resolve outside it ─────
+        try {
+            Path realBase = Paths.get(resolvedBaseDir).toRealPath();
+            if (!filePath.toRealPath().startsWith(realBase)) {
+                log.warn("Attempted real-path/symlink escape: {}", requestPath);
+                return ResponseEntity.badRequest().build();
+            }
+        } catch (IOException e) {
+            log.warn("Could not resolve real path for artifact: {}", requestPath);
+            return ResponseEntity.badRequest().build();
+        }
+
         // ── Detect content type ───────────────────────────────────────────────
         String contentType = Files.probeContentType(filePath);
         if (contentType == null) {
@@ -169,10 +181,18 @@ public class ArtifactController {
             else contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
+        // ── SEC-4: HTML reports are interactive JS apps — serve them as a download so a report that
+        //    echoes user data cannot execute in the app origin. Media (image/video/trace) stays inline.
+        boolean isHtml = contentType.toLowerCase().contains("text/html");
+        String disposition = (isHtml ? "attachment" : "inline") + "; filename=\"" + file.getName() + "\"";
+
         Resource resource = new FileSystemResource(file);
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
-            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getName() + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+            // SEC-4: a served artifact never needs to load app resources or run scripts.
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Security-Policy", "default-src 'none'; sandbox")
             .body(resource);
     }
 

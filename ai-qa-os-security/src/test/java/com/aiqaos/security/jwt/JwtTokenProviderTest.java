@@ -2,8 +2,10 @@ package com.aiqaos.security.jwt;
 
 import com.aiqaos.security.config.JwtProperties;
 import com.aiqaos.security.rbac.UserEntity;
+import com.aiqaos.security.secret.SecretManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -24,8 +26,18 @@ public class JwtTokenProviderTest {
         jwtProperties.setRefreshExpirationMs(86400000); // 24 hours
         jwtProperties.setIssuer("test-issuer");
         jwtProperties.setAllowedOrigins(new ArrayList<>());
-        
-        jwtTokenProvider = new JwtTokenProvider(jwtProperties);
+
+        jwtTokenProvider = new JwtTokenProvider(jwtProperties, nullSecretManagerProvider(), false);
+    }
+
+    /** A no-op {@link ObjectProvider} that resolves no {@link SecretManager} (avoids Mockito on JDK 25). */
+    static ObjectProvider<SecretManager> nullSecretManagerProvider() {
+        return new ObjectProvider<>() {
+            @Override public SecretManager getObject(Object... args) { return null; }
+            @Override public SecretManager getObject() { return null; }
+            @Override public SecretManager getIfAvailable() { return null; }
+            @Override public SecretManager getIfUnique() { return null; }
+        };
     }
 
     @Test

@@ -1,0 +1,55 @@
+# SEC-5: supply-chain scanning — dependency CVEs (report-only) + secret scanning (blocking).
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 1'   # weekly (Mon 06:00 UTC) — new CVEs appear after code lands
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF to the Security tab
+
+jobs:
+  dependency-scan:
+    name: Dependency CVE scan (report-only)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # SEC-5: scan Maven (pom.xml) + npm (package-lock.json) manifests for known CVEs.
+    # Report-only (exit-code 0) — findings surface in the Security tab, do not block (visibility-first).
+    # ORG-1: vendored node_modules removed, so the scan reads the package-lock.json manifest directly.
+    - name: Trivy filesystem scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        scan-ref: .
+        format: sarif
+        output: trivy-fs.sarif
+        severity: CRITICAL,HIGH
+        ignore-unfixed: true
+        exit-code: '0'
+    - name: Upload Trivy results to Security tab
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-fs.sarif
+        category: trivy-dependencies
+
+  secret-scan:
+    name: Secret scan (blocking)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # SEC-5: fail the build on any committed secret. Scans the working tree (--no-git) so it gates the
+    # current codebase without failing on historical commits; allowlist covers labeled test-only values.
+    # (Historical secret rotation / history purge is tracked separately — FI-SEC5-C.)
+    - name: gitleaks secret scan
+      run: |
+        docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+          detect --source /repo --no-git \
+          --config /repo/.github/gitleaks.toml \
+          --redact --verbose --exit-code 1
