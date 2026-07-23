@@ -8,6 +8,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+/**
+ * Configuration for Memory Stores.
+ *
+ * <p>Vector Store Provider Hierarchy (SCALE-3):
+ * <ul>
+ *   <li><b>Production:</b> {@code aiqaos.memory.vector.provider=qdrant} (QdrantStoreClient)</li>
+ *   <li><b>Dev/Test Default:</b> {@code aiqaos.memory.vector.provider=in-memory} or unset (InMemoryVectorStoreClient)</li>
+ *   <li><b>Experimental:</b> {@code aiqaos.memory.vector.experimental.enabled=true} (Chroma, Milvus, PgVector)</li>
+ * </ul>
+ */
 @Configuration
 public class MemoryConfig {
 

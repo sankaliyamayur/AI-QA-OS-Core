@@ -14,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-@ConditionalOnProperty(name = "aiqaos.memory.vector.provider", matchIfMissing = true)
+@ConditionalOnProperty(name = "aiqaos.memory.vector.provider", havingValue = "in-memory", matchIfMissing = true)
 public class InMemoryVectorStoreClient implements VectorStoreClient {
 
     private final SimilarityCalculator similarityCalculator;

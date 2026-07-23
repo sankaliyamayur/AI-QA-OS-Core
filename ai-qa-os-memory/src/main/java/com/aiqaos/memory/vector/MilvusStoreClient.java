@@ -8,8 +8,14 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * @deprecated Deprecated under SCALE-3 vector store standardization.
+ * Qdrant (production) and InMemory (dev/test) are the supported providers.
+ * Enable experimental providers with aiqaos.memory.vector.experimental.enabled=true.
+ */
+@Deprecated
 @Component
-@ConditionalOnProperty(name = "aiqaos.memory.vector.provider", havingValue = "milvus")
+@ConditionalOnProperty(name = "aiqaos.memory.vector.experimental.enabled", havingValue = "true")
 public class MilvusStoreClient implements VectorStoreClient {
 
     @Override
