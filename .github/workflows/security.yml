@@ -18,7 +18,7 @@ jobs:
     name: Dependency CVE scan (report-only)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     # SEC-5: scan Maven (pom.xml) + npm (package-lock.json) manifests for known CVEs.
     # Report-only (exit-code 0) — findings surface in the Security tab, do not block (visibility-first).
     # ORG-1: vendored node_modules removed, so the scan reads the package-lock.json manifest directly.
@@ -43,7 +43,7 @@ jobs:
     name: Secret scan (blocking)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     # SEC-5: fail the build on any committed secret. Scans the working tree (--no-git) so it gates the
     # current codebase without failing on historical commits; allowlist covers labeled test-only values.
     # (Historical secret rotation / history purge is tracked separately — FI-SEC5-C.)
