@@ -1,0 +1,91 @@
+# OBS-2: Observability stack — Prometheus + Grafana + Alertmanager
+# Usage: docker compose -f docker-compose-observability.yml up -d
+#
+# Ports:
+#   Prometheus:   http://localhost:9090
+#   Grafana:      http://localhost:3001  (admin / admin on first run)
+#   Alertmanager: http://localhost:9093
+#
+# Prerequisites: AI-QA-OS services must be running (gateway on :8082, dashboard on :8090).
+# For local non-containerised services, Prometheus uses host.docker.internal as target.
+
+version: '3.8'
+
+services:
+
+  # ── Prometheus ─────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: qaos-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle       # hot-reload via POST /-/reload
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - qaos-obs
+    extra_hosts:
+      # Allow scraping local (non-containerised) AI-QA-OS services in dev
+      - "host.docker.internal:host-gateway"
+
+  # ── Alertmanager ───────────────────────────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: qaos-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://localhost:9093
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - qaos-obs
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://hooks.slack.com/placeholder}
+      - PAGERDUTY_INTEGRATION_KEY=${PAGERDUTY_INTEGRATION_KEY:-placeholder}
+
+  # ── Grafana ────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: qaos-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/ai-qa-os-overview.json
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Auto-provision Prometheus datasource
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      # Auto-provision AI-QA-OS dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - qaos-obs
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+
+networks:
+  qaos-obs:
+    driver: bridge

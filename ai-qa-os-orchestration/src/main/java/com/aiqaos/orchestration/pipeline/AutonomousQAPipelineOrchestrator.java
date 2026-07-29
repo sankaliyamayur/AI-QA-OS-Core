@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -46,6 +47,18 @@ public class AutonomousQAPipelineOrchestrator {
     private TraceManager traceManager;
     @Autowired(required = false)
     private CorrelationTraceBridge correlationTraceBridge;
+
+    // WF-3: Learning analysis components (field-injected for non-breaking spring autowiring)
+    @Autowired(required = false)
+    private com.aiqaos.learning.analysis.FlakyTestDetector flakyTestDetector;
+    @Autowired(required = false)
+    private com.aiqaos.learning.analysis.FailedTestRerunSelector failedTestRerunSelector;
+    @Autowired(required = false)
+    private com.aiqaos.learning.analysis.TestImpactAnalyzer testImpactAnalyzer;
+
+    // WF-1: Synthetic data generator for TEST_DATA_SYNTHESIS workflow mode
+    @Autowired(required = false)
+    private com.aiqaos.testdata.synthetic.SyntheticGenerator syntheticGenerator;
 
     @Autowired
     public AutonomousQAPipelineOrchestrator(
@@ -236,7 +249,39 @@ public class AutonomousQAPipelineOrchestrator {
 
             counters[0]++;
 
-            if ("BugAnalysisStep".equals(step.getName()) && context.getQaWorkflowState() != null) {
+            // WF-1: Check distinct workflow execution modes (SCENARIO_ONLY | TEST_DATA_SYNTHESIS | FULL_E2E)
+            Object modeObj = request.getInputs() != null ? request.getInputs().get("workflowMode") : null;
+            String workflowMode = modeObj != null ? modeObj.toString().toUpperCase() : "FULL_E2E";
+
+            if ("TestCaseGenerationStep".equals(step.getName())) {
+                if ("SCENARIO_ONLY".equals(workflowMode)) {
+                    finalResponse.setMessage("Scenario generation workflow completed successfully (SCENARIO_ONLY mode)");
+                    finalResponse.getOutputs().put("workflowMode", "SCENARIO_ONLY");
+                    finalResponse.getOutputs().put("executionId", executionId);
+                    counters[2] += (pipelineSteps.size() - i - 1); // record skipped steps
+                    context.setStatus(WorkflowStatus.COMPLETED);
+                    workflowExecutionService.completeExecution(executionId, finalResponse, context,
+                            pipelineSteps.size(), counters[0], counters[1], counters[2], retryCounter[0]);
+                    return finalResponse;
+                } else if ("TEST_DATA_SYNTHESIS".equals(workflowMode)) {
+                    if (syntheticGenerator != null) {
+                        String datasetType = (String) request.getInputs().getOrDefault("datasetType", "USER_PROFILE");
+                        Map<String, Object> fixture = syntheticGenerator.generateFixture(datasetType);
+                        finalResponse.getOutputs().put("testDataFixture", fixture);
+                        context.getVariables().put("testDataFixture", fixture);
+                    }
+                    finalResponse.setMessage("Test data synthesis workflow completed successfully (TEST_DATA_SYNTHESIS mode)");
+                    finalResponse.getOutputs().put("workflowMode", "TEST_DATA_SYNTHESIS");
+                    finalResponse.getOutputs().put("executionId", executionId);
+                    counters[2] += (pipelineSteps.size() - i - 1);
+                    context.setStatus(WorkflowStatus.COMPLETED);
+                    workflowExecutionService.completeExecution(executionId, finalResponse, context,
+                            pipelineSteps.size(), counters[0], counters[1], counters[2], retryCounter[0]);
+                    return finalResponse;
+                }
+            }
+
+            if ("BugAnalysisStep".equals(step.getName()) && bugAnalyticsService != null && context.getQaWorkflowState() != null && context.getQaWorkflowState().getBugAnalysisReport() != null) {
                 bugAnalyticsService.recordBug(executionId, workflowId, context.getQaWorkflowState().getBugAnalysisReport());
             }
 
@@ -307,5 +352,29 @@ public class AutonomousQAPipelineOrchestrator {
 
     public List<com.aiqaos.core.engine.WorkflowStep<WorkflowRequest, WorkflowResponse>> getPipelineSteps() {
         return pipelineSteps;
+    }
+
+    // WF-3: Test Impact Analysis helper
+    public List<String> selectImpactedSteps(List<String> modifiedFiles, List<String> availableStepNames) {
+        if (testImpactAnalyzer != null) {
+            return testImpactAnalyzer.analyzeImpactedSteps(modifiedFiles, availableStepNames);
+        }
+        return availableStepNames != null ? availableStepNames : java.util.Collections.emptyList();
+    }
+
+    // WF-3: Failed Test Re-run selector helper
+    public List<String> selectFailedStepsForRerun(List<com.aiqaos.learning.analysis.FailedTestRerunSelector.StepExecutionRecord> stepRecords) {
+        if (failedTestRerunSelector != null) {
+            return failedTestRerunSelector.selectFailedStepsForRerun(stepRecords);
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    // WF-3: Flaky Test analysis helper
+    public com.aiqaos.learning.analysis.FlakyTestReport analyzeStepFlakiness(String stepName, List<String> executionOutcomes) {
+        if (flakyTestDetector != null) {
+            return flakyTestDetector.analyzeStepHistory(stepName, executionOutcomes);
+        }
+        return new com.aiqaos.learning.analysis.FlakyTestReport(stepName, 0, 0, 0, 0.0, com.aiqaos.learning.analysis.FlakyTestReport.Recommendation.STABLE);
     }
 }

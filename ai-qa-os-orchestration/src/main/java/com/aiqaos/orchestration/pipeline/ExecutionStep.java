@@ -46,6 +46,10 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
     @Autowired(required = false)
     private com.aiqaos.execution.queue.ExecutionJobQueue executionJobQueue;
 
+    // WF-4: fan-out across the browser×shard matrix (always present in the app; null in direct-construction tests).
+    @Autowired(required = false)
+    private com.aiqaos.execution.scheduler.ShardedExecutionScheduler shardedExecutionScheduler;
+
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ExecutionStep.class);
 
     @Override
@@ -128,6 +132,10 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
                 }
                 execResult = jobResult.getResult();
                 log.info("[ExecutionStep] Ran execution via decoupled job queue (job {})", job.getJobId());
+            } else if (shardedExecutionScheduler != null) {
+                // WF-4: fan out across the browser×shard matrix (a single-browser/no-shard config runs
+                // as one unit, identical to the pre-WF-4 engine call).
+                execResult = shardedExecutionScheduler.execute(scriptSuite, config, framework);
             } else {
                 ExecutionEngine engine = engineFactory.getEngine(framework);
                 execResult = engine.execute(scriptSuite, config);

@@ -2,6 +2,7 @@ package com.aiqaos.learning.memory;
 
 import com.aiqaos.core.model.FailurePattern;
 import com.aiqaos.core.model.SelfHealingRecommendation;
+import com.aiqaos.learning.reflection.ImprovementProposal;
 import com.aiqaos.memory.store.MemoryStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ public class LearningMemoryStore {
 
     private static final String FAILURE_PATTERNS_KEY = "learning:failure_patterns";
     private static final String RECOMMENDATIONS_KEY = "learning:recommendations";
+    private static final String IMPROVEMENT_PROPOSALS_KEY = "learning:improvement_proposals";
     private static final Duration TTL = Duration.ofDays(30);
 
     public void storeFailurePatterns(List<FailurePattern> patterns) {
@@ -67,8 +69,35 @@ public class LearningMemoryStore {
         return new ArrayList<>();
     }
 
+    /**
+     * LRN-1: record improvement proposals from the reflection stage, keyed by {@code proposalId}
+     * (a re-recorded proposal replaces the prior one). Recorded, not adopted — adoption is gated on
+     * LRN-4.
+     */
+    public void storeImprovementProposals(List<ImprovementProposal> proposals) {
+        if (proposals == null || proposals.isEmpty()) {
+            return;
+        }
+        List<ImprovementProposal> existing = getImprovementProposals();
+        for (ImprovementProposal p : proposals) {
+            existing.removeIf(e -> e.getProposalId() != null
+                    && e.getProposalId().equals(p.getProposalId()));
+            existing.add(p);
+        }
+        memoryStore.put(IMPROVEMENT_PROPOSALS_KEY, existing, TTL);
+    }
+
+    public List<ImprovementProposal> getImprovementProposals() {
+        Optional<Object> val = memoryStore.get(IMPROVEMENT_PROPOSALS_KEY);
+        if (val.isPresent() && val.get() instanceof List) {
+            return new ArrayList<>((List<ImprovementProposal>) val.get());
+        }
+        return new ArrayList<>();
+    }
+
     public void clear() {
         memoryStore.remove(FAILURE_PATTERNS_KEY);
         memoryStore.remove(RECOMMENDATIONS_KEY);
+        memoryStore.remove(IMPROVEMENT_PROPOSALS_KEY);
     }
 }

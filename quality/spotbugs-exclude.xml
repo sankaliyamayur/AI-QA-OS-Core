@@ -1,0 +1,31 @@
+<!--
+  DX-8: SpotBugs exclusion filter for AI-QA-OS.
+  Excludes known-safe patterns that generate false positives in Spring/JPA/Mockito contexts.
+  See: https://spotbugs.readthedocs.io/en/stable/filter.html
+-->
+<FindBugsFilter>
+
+    <!-- Spring @Autowired field injection — not a real null-deref risk in Spring context -->
+    <Match>
+        <Bug pattern="UWF_UNWRITTEN_FIELD,NP_UNWRITTEN_FIELD"/>
+    </Match>
+
+    <!-- JPA entity equals/hashCode on @Id — standard pattern, not a bug -->
+    <Match>
+        <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
+        <Class annotation="jakarta.persistence.Entity"/>
+    </Match>
+
+    <!-- ObjectProvider.getIfAvailable() optional-bean lookups always checked -->
+    <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        <Method name="getIfAvailable"/>
+    </Match>
+
+    <!-- Test classes: intentional field writes in @BeforeEach are safe -->
+    <Match>
+        <Class name="~.*Test$"/>
+        <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    </Match>
+
+</FindBugsFilter>

@@ -1,0 +1,56 @@
+# OBS-2: Prometheus configuration for AI-QA-OS
+# Scrapes all service Prometheus endpoints every 15s.
+# Run via: docker compose -f docker-compose-observability.yml up
+#
+# Service endpoints (container names match docker-compose-observability.yml):
+#   gateway:    http://qaos-gateway:8082/actuator/prometheus
+#   dashboard:  http://qaos-dashboard:8090/actuator/prometheus
+#
+# For local development (services not containerised), use host.docker.internal:
+#   http://host.docker.internal:8082/actuator/prometheus
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    platform: ai-qa-os
+    env: ${AIQAOS_ENV:-local}
+
+# OBS-2: Alert rules file loaded from this config
+rule_files:
+  - /etc/prometheus/alerting-rules.yml
+
+# OBS-2: Alertmanager integration (send alerts to Slack/email/PagerDuty)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - qaos-alertmanager:9093
+
+scrape_configs:
+
+  # ── Gateway (REST API + pipeline trigger surface) ──────────────────────
+  - job_name: ai-qa-os-gateway
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - qaos-gateway:8082
+        labels:
+          service: gateway
+
+  # ── Dashboard (execution history + human-review API) ───────────────────
+  - job_name: ai-qa-os-dashboard
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - qaos-dashboard:8090
+        labels:
+          service: dashboard
+
+  # ── Prometheus self-monitoring ─────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090

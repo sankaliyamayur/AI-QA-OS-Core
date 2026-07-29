@@ -97,13 +97,18 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
             //   3. ArtifactsDir
             //   4. AppBaseUrl
             //   5. ConfigFile (pass empty string to auto-resolve)
+            //   6. Shard (WF-4: "i/N" for Playwright --shard; empty when not sharded)
+            String shard = (configuration.getShardCount() > 1 && configuration.getShardIndex() >= 1)
+                ? configuration.getShardIndex() + "/" + configuration.getShardCount()
+                : "";
             ProcessBuilder pb = new ProcessBuilder(
                 "powershell.exe", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
                 executionId,
                 browser,
                 resolveArtifactsBaseDir(),
                 appBaseUrl,
-                ""
+                "",
+                shard
             );
             pb.redirectErrorStream(true);
             pb.directory(new File(scriptPath).getParentFile());

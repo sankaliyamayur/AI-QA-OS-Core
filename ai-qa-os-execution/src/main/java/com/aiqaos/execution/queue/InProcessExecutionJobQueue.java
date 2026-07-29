@@ -39,7 +39,9 @@ public class InProcessExecutionJobQueue implements ExecutionJobQueue {
     public InProcessExecutionJobQueue(ExecutionEngineFactory engineFactory,
                                       @Value("${aiqaos.execution.queue.workers:4}") int workers) {
         this.engineFactory = engineFactory;
-        this.pool = Executors.newFixedThreadPool(Math.max(1, workers));
+        this.pool = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("execution-worker-vt-", 0).factory()
+        );
     }
 
     @Override

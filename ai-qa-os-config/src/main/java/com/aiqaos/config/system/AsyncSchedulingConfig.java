@@ -1,11 +1,13 @@
 package com.aiqaos.config.system;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 @Configuration
 @EnableAsync
@@ -14,12 +16,10 @@ public class AsyncSchedulingConfig implements AsyncConfigurer {
 
     @Override
     public Executor getAsyncExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
-        executor.setQueueCapacity(500);
-        executor.setThreadNamePrefix("ai-qa-os-async-");
-        executor.initialize();
-        return executor;
+        return new TaskExecutorAdapter(
+                Executors.newThreadPerTaskExecutor(
+                        Thread.ofVirtual().name("ai-qa-os-async-vt-", 0).factory()
+                )
+        );
     }
 }

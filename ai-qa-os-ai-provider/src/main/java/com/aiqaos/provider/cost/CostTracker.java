@@ -16,6 +16,10 @@ public class CostTracker {
     private final LLMCostRepository costRepository;
     private final AgentTraceRepository agentTraceRepository;
 
+    // ENT-3: optional — records spend into the in-memory quota ledger (null in direct-construction tests).
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SpendLedger spendLedger;
+
     public CostTracker(LLMCostRepository costRepository, AgentTraceRepository agentTraceRepository) {
         this.costRepository = costRepository;
         this.agentTraceRepository = agentTraceRepository;
@@ -55,6 +59,11 @@ public class CostTracker {
         trace.setLatencyMs(resp.getLatencyMs());
         trace.setTimestamp(LocalDateTime.now());
         agentTraceRepository.save(trace);
+
+        // ENT-3: feed the fast quota ledger with the actual cost (durable record is the row above).
+        if (spendLedger != null) {
+            spendLedger.record(cost, req.getCorrelationId(), req.getAgentType());
+        }
     }
 
     private double calculateCost(String provider, String model, long input, long output) {

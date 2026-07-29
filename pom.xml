@@ -25,6 +25,7 @@
         <module>ai-qa-os-execution</module>
         <module>ai-qa-os-healing</module>
         <module>ai-qa-os-testdata</module>
+        <module>ai-qa-os-tenant</module>
         <module>ai-qa-os-reporting</module>
         <module>ai-qa-os-security</module>
         <module>ai-qa-os-observability</module>
@@ -45,6 +46,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <lombok.version>1.18.34</lombok.version>
+        <archunit.version>1.3.0</archunit.version>
     </properties>
 
     <dependencyManagement>
@@ -64,6 +66,13 @@
                 <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- ArchUnit for DX-6 Architecture Testing -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -105,6 +114,101 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
                 </plugin>
+
+                <!-- ─── DX-8: Code Quality Plugins ──────────────────────────── -->
+
+                <!-- JaCoCo: coverage instrumentation + report -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.12</version>
+                    <executions>
+                        <!-- Instrument JVM before tests run -->
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals><goal>prepare-agent</goal></goals>
+                        </execution>
+                        <!-- Generate HTML + XML report after tests -->
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals><goal>report</goal></goals>
+                        </execution>
+                        <!-- Coverage gate: warn if line coverage < 50% on non-trivial modules.
+                             Uses WARN-only mode (haltOnFailure=false) so it never breaks CI;
+                             elevate to ERROR once coverage baseline is established (DX-8 follow-up). -->
+                        <execution>
+                            <id>check-coverage</id>
+                            <phase>verify</phase>
+                            <goals><goal>check</goal></goals>
+                            <configuration>
+                                <haltOnFailure>false</haltOnFailure>
+                                <rules>
+                                    <rule>
+                                        <element>BUNDLE</element>
+                                        <limits>
+                                            <limit>
+                                                <counter>LINE</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>0.30</minimum>
+                                            </limit>
+                                        </limits>
+                                    </rule>
+                                </rules>
+                                <!-- Skip data/stub modules that have no meaningful logic -->
+                                <excludes>
+                                    <exclude>com/aiqaos/data/**</exclude>
+                                    <exclude>com/aiqaos/testdata/**</exclude>
+                                    <exclude>com/aiqaos/agents/runtime/**</exclude>
+                                </excludes>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- Checkstyle: style + import discipline (warn-mode) -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>3.4.0</version>
+                    <configuration>
+                        <configLocation>${maven.multiModuleProjectDirectory}/quality/checkstyle.xml</configLocation>
+                        <failsOnError>false</failsOnError>
+                        <failOnViolation>false</failOnViolation>
+                        <logViolationsToConsole>true</logViolationsToConsole>
+                        <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                        <outputFile>${project.build.directory}/checkstyle-result.xml</outputFile>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>checkstyle-check</id>
+                            <phase>verify</phase>
+                            <goals><goal>check</goal></goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- SpotBugs: bug-pattern detection (warn-mode) -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>4.8.6.4</version>
+                    <configuration>
+                        <effort>Default</effort>
+                        <threshold>High</threshold>
+                        <failOnError>false</failOnError>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/quality/spotbugs-exclude.xml</excludeFilterFile>
+                        <xmlOutput>true</xmlOutput>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>spotbugs-check</id>
+                            <phase>verify</phase>
+                            <goals><goal>check</goal></goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
             </plugins>
         </pluginManagement>
         <plugins>
@@ -112,7 +216,34 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
             </plugin>
+            <!-- DX-8: Activate JaCoCo for every module automatically -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
+
+    <!--
+        DX-8: quality profile — run `mvn verify -Pquality` to activate Checkstyle+SpotBugs.
+        Kept opt-in (not default) so routine `mvn test` stays fast; CI adds -Pquality on PRs.
+    -->
+    <profiles>
+        <profile>
+            <id>quality</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

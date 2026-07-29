@@ -15,6 +15,8 @@ import com.aiqaos.core.model.SelfHealingRecommendation;
 import com.aiqaos.learning.analyzer.FailurePatternAnalyzer;
 import com.aiqaos.learning.healing.SelfHealingEngine;
 import com.aiqaos.learning.memory.LearningMemoryStore;
+import com.aiqaos.learning.reflection.ReflectionResult;
+import com.aiqaos.learning.reflection.ReflectionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -43,6 +45,10 @@ public class LearningEngineImpl implements LearningEngine {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    /** LRN-1: reflection stage — optional so the engine still works if no reflector is wired. */
+    @Autowired(required = false)
+    private ReflectionService reflectionService;
 
     @Override
     public AgentResponse analyze(QAExecutionReport report, WorkflowContext context) {
@@ -124,6 +130,24 @@ public class LearningEngineImpl implements LearningEngine {
         event.setSourceAgent("AI-QA-OS LearningEngine (local)");
         event.setCreatedTime(LocalDateTime.now());
         fallback.getEvents().add(event);
+
+        // LRN-1: close the loop — reflect patterns into improvement proposals and record them.
+        // Proposals are recorded, NOT auto-adopted (adoption is gated on LRN-4).
+        if (reflectionService != null) {
+            ReflectionResult reflection = reflectionService.reflect(patterns);
+            if (reflection.getCount() > 0) {
+                memoryStore.storeImprovementProposals(reflection.getProposals());
+                LearningEvent improveEvent = new LearningEvent();
+                improveEvent.setEventId("EVT-IMPROVE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                improveEvent.setExecutionId(report.getExecutionId() != null ? report.getExecutionId() : "EXEC-UNKNOWN");
+                improveEvent.setEventType("IMPROVEMENT_PROPOSAL");
+                improveEvent.setCategory("REFLECTION");
+                improveEvent.setDescription(reflection.summary() + " recorded (adoption gated on LRN-4)");
+                improveEvent.setSourceAgent("AI-QA-OS ReflectionService");
+                improveEvent.setCreatedTime(LocalDateTime.now());
+                fallback.getEvents().add(improveEvent);
+            }
+        }
 
         return fallback;
     }

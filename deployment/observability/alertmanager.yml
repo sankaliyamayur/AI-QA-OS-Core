@@ -1,0 +1,105 @@
+# OBS-2: Alertmanager configuration for AI-QA-OS
+# Receives alerts from Prometheus → routes to Slack + PagerDuty.
+# Inject SLACK_WEBHOOK_URL and PAGERDUTY_INTEGRATION_KEY via environment/secrets.
+
+global:
+  resolve_timeout: 5m
+  # Default Slack channel for all alerts not matched by specific routes
+  slack_api_url: ${SLACK_WEBHOOK_URL}
+
+route:
+  receiver: slack-default
+  group_by: [alertname, service, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts → PagerDuty + Slack immediately
+    - match:
+        severity: critical
+      receiver: pagerduty-critical
+      continue: true   # also send to Slack
+
+    - match:
+        severity: critical
+      receiver: slack-critical
+
+    # Warning alerts → Slack only
+    - match:
+        severity: warning
+      receiver: slack-warning
+
+    # Info alerts → suppressed at night (08:00-20:00 UTC only)
+    - match:
+        severity: info
+      receiver: slack-info
+      active_time_intervals:
+        - business-hours
+
+receivers:
+
+  - name: slack-default
+    slack_configs:
+      - channel: '#ai-qa-os-alerts'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}'
+        text: |
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          {{ range .Alerts }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  - name: slack-critical
+    slack_configs:
+      - channel: '#ai-qa-os-critical'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '🚨 CRITICAL: {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}*{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ if .Annotations.runbook }}📖 Runbook: {{ .Annotations.runbook }}{{ end }}
+          {{ end }}
+
+  - name: slack-warning
+    slack_configs:
+      - channel: '#ai-qa-os-alerts'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        title: '⚠️ WARNING: {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+
+  - name: slack-info
+    slack_configs:
+      - channel: '#ai-qa-os-info'
+        send_resolved: false
+        title: 'ℹ️ {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+
+  - name: pagerduty-critical
+    pagerduty_configs:
+      - routing_key: ${PAGERDUTY_INTEGRATION_KEY}
+        description: '{{ .CommonLabels.alertname }}: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        severity: critical
+        client: AI-QA-OS Alertmanager
+        client_url: http://qaos-grafana:3000
+
+time_intervals:
+  - name: business-hours
+    time_intervals:
+      - weekdays: [monday:friday]
+        times:
+          - start_time: 08:00
+            end_time: 20:00
+
+inhibit_rules:
+  # Suppress warning alerts when a critical alert is already firing for the same service
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: [alertname, service]

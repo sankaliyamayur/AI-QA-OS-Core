@@ -13,7 +13,10 @@ param (
     [string]$AppBaseUrl = "http://localhost:8080",
 
     [Parameter(Mandatory = $false)]
-    [string]$ConfigFile = ""
+    [string]$ConfigFile = "",
+
+    [Parameter(Mandatory = $false)]
+    [string]$Shard = ""
 )
 
 # ============================================================
@@ -102,9 +105,16 @@ try {
     $oldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
 
+    # WF-4: pass Playwright native --shard "i/N" only when sharding is requested (empty array = no-op).
+    $shardArgs = @()
+    if (-not [string]::IsNullOrEmpty($Shard)) {
+        $shardArgs = @("--shard", $Shard)
+    }
+
     & npx playwright test `
         --config $ConfigFile `
         --project $Browser `
+        @shardArgs `
         2>&1 | ForEach-Object { Write-Output $_ }
 
     $playwrightExitCode = $LASTEXITCODE

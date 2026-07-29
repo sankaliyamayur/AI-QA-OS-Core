@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  DX-8: AI-QA-OS Checkstyle Configuration
+  Style: Google Java Style Guide (core subset), warn-mode to avoid blocking CI while teams adopt.
+  Enforces:
+    - File encoding / trailing whitespace
+    - Import ordering (no star imports, no unused imports)
+    - Naming conventions (camelCase methods/fields, UPPER_CASE constants, PascalCase types)
+    - Javadoc presence on public API (package-private exempt)
+    - Basic complexity guards (max method length 80 lines, cyclomatic complexity 15)
+  See: https://checkstyle.org/checks.html
+-->
+<module name="Checker">
+
+    <property name="severity" value="warning"/>
+    <property name="charset" value="UTF-8"/>
+
+    <!-- ── File-level checks ───────────────────────────────────────────────── -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileLength">
+        <property name="max" value="600"/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <!-- ── Imports ──────────────────────────────────────────────────────── -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+
+        <!-- ── Naming ───────────────────────────────────────────────────────── -->
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="StaticVariableName"/>
+        <module name="ConstantName"/>
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+
+        <!-- ── Whitespace ────────────────────────────────────────────────────── -->
+        <module name="WhitespaceAround">
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyConstructors" value="true"/>
+        </module>
+        <module name="NoWhitespaceAtEndOfLine"/>
+
+        <!-- ── Complexity ────────────────────────────────────────────────────── -->
+        <module name="MethodLength">
+            <property name="max" value="80"/>
+        </module>
+        <module name="CyclomaticComplexity">
+            <property name="max" value="15"/>
+        </module>
+        <module name="ParameterNumber">
+            <property name="max" value="8"/>
+        </module>
+
+        <!-- ── Code quality ──────────────────────────────────────────────────── -->
+        <module name="EqualsHashCode"/>
+        <module name="StringLiteralEquality"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="EmptyCatchBlock">
+            <property name="exceptionVariableName" value="ignore|ignored|expected"/>
+        </module>
+
+        <!-- ── Braces ─────────────────────────────────────────────────────────── -->
+        <module name="NeedBraces"/>
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+
+        <!-- ── Misc ────────────────────────────────────────────────────────────── -->
+        <module name="UpperEll"/>
+        <module name="ArrayTypeStyle"/>
+
+    </module>
+
+</module>

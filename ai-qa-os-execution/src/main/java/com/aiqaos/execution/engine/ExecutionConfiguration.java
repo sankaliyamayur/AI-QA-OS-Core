@@ -9,6 +9,13 @@ public class ExecutionConfiguration {
     private BrowserType browser = BrowserType.CHROME;
     private boolean headless = true;
 
+    // WF-4: the browser matrix to fan out across (empty → just [browser], the pre-WF-4 behaviour).
+    private java.util.List<BrowserType> browsers = new java.util.ArrayList<>();
+    // WF-4: total Playwright shards for the suite (1 = no sharding). Per-unit index below.
+    private int shardCount = 1;
+    // WF-4: which shard THIS unit runs (1-based; 0 = not sharded). Set by the matrix planner per unit.
+    private int shardIndex = 0;
+
     public ExecutionConfiguration() {}
 
     public ExecutionMode getExecutionMode() { return executionMode; }
@@ -28,4 +35,15 @@ public class ExecutionConfiguration {
 
     public boolean isHeadless() { return headless; }
     public void setHeadless(boolean headless) { this.headless = headless; }
+
+    public java.util.List<BrowserType> getBrowsers() { return browsers; }
+    public void setBrowsers(java.util.List<BrowserType> browsers) {
+        this.browsers = browsers == null ? new java.util.ArrayList<>() : browsers;
+    }
+
+    public int getShardCount() { return shardCount; }
+    public void setShardCount(int shardCount) { this.shardCount = shardCount; }
+
+    public int getShardIndex() { return shardIndex; }
+    public void setShardIndex(int shardIndex) { this.shardIndex = shardIndex; }
 }

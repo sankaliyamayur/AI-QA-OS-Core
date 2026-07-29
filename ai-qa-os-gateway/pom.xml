@@ -48,6 +48,11 @@
         </dependency>
         <dependency>
             <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-tenant</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-security</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -80,6 +85,11 @@
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-observability</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-ai-provider</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- PostgreSQL and Spring Data JPA dependencies -->
@@ -119,5 +129,14 @@
                 <targetPath>db/migration</targetPath>
             </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>

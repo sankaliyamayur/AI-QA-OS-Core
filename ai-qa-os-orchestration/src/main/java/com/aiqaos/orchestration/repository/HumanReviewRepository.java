@@ -14,4 +14,7 @@ public interface HumanReviewRepository extends JpaRepository<HumanReviewEntity, 
     List<HumanReviewEntity> findByStatusOrderByCreatedTimeDesc(String status);
 
     Optional<HumanReviewEntity> findFirstByWorkflowIdAndStatusOrderByCreatedTimeDesc(UUID workflowId, String status);
+
+    // GOV-1: all reviews for a run (audit trail).
+    List<HumanReviewEntity> findByWorkflowId(UUID workflowId);
 }

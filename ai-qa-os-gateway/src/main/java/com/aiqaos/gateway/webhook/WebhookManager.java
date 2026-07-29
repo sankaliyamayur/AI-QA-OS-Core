@@ -1,9 +1,13 @@
 package com.aiqaos.gateway.webhook;
 
+import com.aiqaos.core.contract.WorkflowResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+/**
+ * WF-2: Webhook Manager for CI & Scheduled Pipeline Triggers.
+ */
 @Component
 public class WebhookManager {
 
@@ -22,13 +26,16 @@ public class WebhookManager {
         this.azureHandler   = azureHandler;
     }
 
-    public void dispatch(String source, Map<String, Object> payload) {
-        switch (source.toUpperCase()) {
+    public WorkflowResponse dispatch(String source, Map<String, Object> payload) {
+        if (source == null) {
+            throw new IllegalArgumentException("Webhook source cannot be null");
+        }
+        return switch (source.toUpperCase()) {
             case "JENKINS"       -> jenkinsHandler.handle(payload);
             case "GITHUB"        -> githubHandler.handle(payload);
             case "GITLAB"        -> gitlabHandler.handle(payload);
             case "AZURE_DEVOPS"  -> azureHandler.handle(payload);
             default -> throw new IllegalArgumentException("Unknown webhook source: " + source);
-        }
+        };
     }
 }

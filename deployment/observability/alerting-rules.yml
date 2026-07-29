@@ -1,0 +1,156 @@
+# OBS-2: AI-QA-OS Prometheus Alerting Rules
+# Loaded by Prometheus via rule_files in prometheus.yml.
+# Alerts are forwarded to Alertmanager → Slack/PagerDuty/email.
+#
+# Severity levels:
+#   critical  — immediate page (SLO breach, data loss risk)
+#   warning   — Slack notification (degraded, monitor closely)
+#   info      — informational (trend-based, no action needed)
+
+groups:
+
+  # ── Pipeline health ─────────────────────────────────────────────────────
+  - name: pipeline-health
+    rules:
+
+      - alert: PipelineHighFailureRate
+        # Fires when more than 20% of pipeline runs in the last 5 minutes failed
+        expr: |
+          (
+            rate(qaos_pipeline_runs_total{status="failed"}[5m])
+          /
+            rate(qaos_pipeline_runs_total[5m])
+          ) > 0.20
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pipeline failure rate above 20%"
+          description: "{{ $value | humanizePercentage }} of pipeline runs are failing (threshold 20%) over the last 5m."
+          runbook: "https://github.com/sankaliyamayur/java-QA-Agent-Workflow/wiki/runbooks/pipeline-failure-rate"
+
+      - alert: PipelineCriticalFailureRate
+        expr: |
+          (
+            rate(qaos_pipeline_runs_total{status="failed"}[5m])
+          /
+            rate(qaos_pipeline_runs_total[5m])
+          ) > 0.50
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "CRITICAL: Pipeline failure rate above 50%"
+          description: "{{ $value | humanizePercentage }} of pipeline runs are failing. Immediate investigation required."
+
+      - alert: PipelineSlowExecution
+        # Fires when p95 pipeline duration exceeds 5 minutes
+        expr: |
+          histogram_quantile(0.95,
+            rate(qaos_pipeline_duration_seconds_bucket[10m])
+          ) > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pipeline p95 latency > 5 minutes"
+          description: "95th percentile pipeline duration is {{ $value | humanizeDuration }}. LLM or execution backend may be slow."
+
+      - alert: NoActivePipelinesWarning
+        # Fires if no pipelines have run in the last 30 minutes during business hours
+        expr: rate(qaos_pipeline_runs_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "No pipeline runs in the last 30 minutes"
+          description: "The AI-QA-OS pipeline has not completed any runs. May indicate idle system or upstream blockage."
+
+  # ── LLM cost & availability ─────────────────────────────────────────────
+  - name: llm-health
+    rules:
+
+      - alert: LLMHighErrorRate
+        expr: |
+          (
+            rate(qaos_llm_calls_total{status="error"}[5m])
+          /
+            rate(qaos_llm_calls_total[5m])
+          ) > 0.10
+        for: 2m
+        labels:
+          severity: warning
+          team: ai-provider
+        annotations:
+          summary: "LLM API error rate above 10%"
+          description: "{{ $value | humanizePercentage }} of LLM calls are failing (model={{ $labels.model }}). Check API key or quota."
+
+      - alert: LLMTokenBudgetBurning
+        # Fires when token consumption rate exceeds 100k tokens/minute
+        expr: rate(qaos_llm_tokens_total[1m]) > 100000
+        for: 2m
+        labels:
+          severity: warning
+          team: ai-provider
+        annotations:
+          summary: "LLM token consumption rate is very high"
+          description: "Token burn rate is {{ $value | humanize }} tokens/min on model={{ $labels.model }}. Check for runaway workflows."
+
+  # ── Self-healing ────────────────────────────────────────────────────────
+  - name: self-healing
+    rules:
+
+      - alert: HealingSuccessRateLow
+        expr: |
+          (
+            rate(qaos_healing_attempts_total{outcome="healed"}[10m])
+          /
+            rate(qaos_healing_attempts_total[10m])
+          ) < 0.50
+        for: 5m
+        labels:
+          severity: warning
+          team: healing
+        annotations:
+          summary: "Self-healing success rate below 50%"
+          description: "Only {{ $value | humanizePercentage }} of self-healing attempts are succeeding. Locator patterns may need manual review."
+
+  # ── JVM & infrastructure ─────────────────────────────────────────────────
+  - name: jvm-health
+    rules:
+
+      - alert: JvmHeapUsageHigh
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JVM heap usage above 85%"
+          description: "Service {{ $labels.application }} heap usage is {{ $value | humanizePercentage }}. Risk of OOM."
+
+      - alert: JvmHeapUsageCritical
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.95
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "CRITICAL: JVM heap usage above 95%"
+          description: "Service {{ $labels.application }} is near OOM. Immediate restart may be required."
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service {{ $labels.job }} is DOWN"
+          description: "Prometheus cannot scrape {{ $labels.job }} at {{ $labels.instance }}. The service may be crashed or unreachable."

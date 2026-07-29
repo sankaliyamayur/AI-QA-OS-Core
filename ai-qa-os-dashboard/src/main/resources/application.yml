@@ -15,6 +15,14 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    # SCALE-4: per-service pool sizing — the dashboard is read-leaning (smaller pool than the gateway).
+    hikari:
+      pool-name: dashboard-pool
+      maximum-pool-size: ${AIQAOS_DB_POOL_MAX:10}
+      minimum-idle: ${AIQAOS_DB_POOL_MIN:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -22,7 +30,9 @@ spring:
     show-sql: false
     open-in-view: false
   flyway:
-    enabled: true
+    # ORG-2: Consolidated Flyway ownership — ai-qa-os-gateway is the primary migration owner.
+    # Dashboard defaults to false in multi-service environments to prevent migration races.
+    enabled: ${AIQAOS_FLYWAY_ENABLED:false}
     baseline-on-migrate: true
 
 management:

@@ -8,6 +8,19 @@ public class LLMRequest {
     private String correlationId;
     private String agentType;
     private String purpose;
+    private String model;
+
+    public LLMRequest() {}
+
+    public LLMRequest(String prompt) {
+        this.prompt = prompt;
+    }
+
+    public LLMRequest(String prompt, String model, String purpose) {
+        this.prompt = prompt;
+        this.model = model;
+        this.purpose = purpose;
+    }
 
     public String getPrompt() { return prompt; }
     public void setPrompt(String prompt) { this.prompt = prompt; }
@@ -23,4 +36,6 @@ public class LLMRequest {
     public void setAgentType(String agentType) { this.agentType = agentType; }
     public String getPurpose() { return purpose; }
     public void setPurpose(String purpose) { this.purpose = purpose; }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
 }

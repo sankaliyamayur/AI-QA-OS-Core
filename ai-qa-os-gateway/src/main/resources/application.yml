@@ -15,6 +15,14 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    # SCALE-4: per-service pool sizing — the gateway fronts the workflow write path (write-leaning).
+    hikari:
+      pool-name: gateway-pool
+      maximum-pool-size: ${AIQAOS_DB_POOL_MAX:20}
+      minimum-idle: ${AIQAOS_DB_POOL_MIN:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -22,7 +30,8 @@ spring:
     show-sql: false
     open-in-view: false
   flyway:
-    enabled: true
+    # ORG-2: ai-qa-os-gateway is the primary owner for canonical schema migrations (V1..V15).
+    enabled: ${AIQAOS_FLYWAY_ENABLED:true}
     baseline-on-migrate: true
 
 # SEC-2: JWT signing secret injected from env/secret store (no committed value).
@@ -57,3 +66,21 @@ aiqaos:
           uri: http://localhost:8082
           predicates:
             - Path=/agents/**
+
+# OBS-2: Expose Prometheus scrape endpoint at /actuator/prometheus.
+# Prometheus service is configured to scrape this every 15s (see deployment/observability/prometheus.yml).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      # Common labels applied to every metric — enables Grafana dashboard filtering by service
+      application: ai-qa-os-gateway
+      environment: ${AIQAOS_ENV:local}
