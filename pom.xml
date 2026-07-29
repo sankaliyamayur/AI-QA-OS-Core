@@ -26,6 +26,7 @@
         <module>ai-qa-os-healing</module>
         <module>ai-qa-os-testdata</module>
         <module>ai-qa-os-tenant</module>
+        <module>ai-qa-os-notification</module>
         <module>ai-qa-os-reporting</module>
         <module>ai-qa-os-security</module>
         <module>ai-qa-os-observability</module>

@@ -1,5 +1,6 @@
 package com.aiqaos.dashboard.service;
 
+import com.aiqaos.dashboard.dto.HealingAnalyticsSummary;
 import com.aiqaos.dashboard.dto.HealingMetricDTO;
 import com.aiqaos.observability.entity.HealingMetricEntity;
 import com.aiqaos.observability.repository.HealingMetricRepository;
@@ -14,9 +15,17 @@ import java.util.UUID;
 public class HealingAnalyticsService {
 
     private final HealingMetricRepository healingMetricRepository;
+    private final HealingAnalyticsAssembler assembler;
 
-    public HealingAnalyticsService(HealingMetricRepository healingMetricRepository) {
+    public HealingAnalyticsService(HealingMetricRepository healingMetricRepository,
+                                   HealingAnalyticsAssembler assembler) {
         this.healingMetricRepository = healingMetricRepository;
+        this.assembler = assembler;
+    }
+
+    /** HEAL-3: the healing analytics read-model — success rate + breakdowns over all heals. */
+    public HealingAnalyticsSummary getSummary() {
+        return assembler.summarize(healingMetricRepository.findAll());
     }
 
     public List<HealingMetricDTO> getByExecutionId(UUID executionId) {
