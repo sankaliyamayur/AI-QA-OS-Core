@@ -26,6 +26,14 @@
             <artifactId>ai-qa-os-agents</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- SCALE-1 (ADR-065): distributed job queue over Redis Streams. Optional — not transitive, so
+             modules that don't opt in carry no Redis weight; RedisStreamExecutionJobQueue is
+             @ConditionalOnClass(StringRedisTemplate) + @ConditionalOnExpression(provider=redis). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

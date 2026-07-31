@@ -2,6 +2,8 @@ package com.aiqaos.execution.queue;
 
 import com.aiqaos.core.model.GeneratedScriptSuite;
 import com.aiqaos.execution.engine.ExecutionConfiguration;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * SCALE-1: a unit of execution work placed on the {@link ExecutionJobQueue}. Carries everything a
@@ -22,9 +24,14 @@ public class ExecutionJob {
     private final GeneratedScriptSuite scriptSuite;
     private final ExecutionConfiguration configuration;
 
-    public ExecutionJob(String jobId, String workflowId, String executionId, String correlationId,
-                        String framework, GeneratedScriptSuite scriptSuite,
-                        ExecutionConfiguration configuration) {
+    @JsonCreator
+    public ExecutionJob(@JsonProperty("jobId") String jobId,
+                        @JsonProperty("workflowId") String workflowId,
+                        @JsonProperty("executionId") String executionId,
+                        @JsonProperty("correlationId") String correlationId,
+                        @JsonProperty("framework") String framework,
+                        @JsonProperty("scriptSuite") GeneratedScriptSuite scriptSuite,
+                        @JsonProperty("configuration") ExecutionConfiguration configuration) {
         this.jobId = jobId;
         this.workflowId = workflowId;
         this.executionId = executionId;

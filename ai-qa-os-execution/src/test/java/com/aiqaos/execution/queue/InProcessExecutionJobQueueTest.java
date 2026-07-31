@@ -53,7 +53,7 @@ class InProcessExecutionJobQueueTest {
     @Test
     void submitRunsOnAWorkerAndReturnsTheResult() {
         InProcessExecutionJobQueue queue =
-                new InProcessExecutionJobQueue(new ExecutionEngineFactory(List.of(engine("TEST", false))), 2);
+                new InProcessExecutionJobQueue(new ExecutionJobRunner(new ExecutionEngineFactory(List.of(engine("TEST", false)))));
 
         ExecutionJob job = job("TEST");
         queue.submit(job);
@@ -67,7 +67,7 @@ class InProcessExecutionJobQueueTest {
     @Test
     void engineFailureBecomesAFailedResultNotAThrow() {
         InProcessExecutionJobQueue queue =
-                new InProcessExecutionJobQueue(new ExecutionEngineFactory(List.of(engine("BOOM", true))), 1);
+                new InProcessExecutionJobQueue(new ExecutionJobRunner(new ExecutionEngineFactory(List.of(engine("BOOM", true)))));
 
         ExecutionJob job = job("BOOM");
         queue.submit(job);
@@ -81,7 +81,7 @@ class InProcessExecutionJobQueueTest {
     @Test
     void awaitingAnUnknownJobFails() {
         InProcessExecutionJobQueue queue =
-                new InProcessExecutionJobQueue(new ExecutionEngineFactory(List.of(engine("TEST", false))), 1);
+                new InProcessExecutionJobQueue(new ExecutionJobRunner(new ExecutionEngineFactory(List.of(engine("TEST", false)))));
 
         assertThatThrownBy(() -> queue.awaitResult("no-such-job", Duration.ofSeconds(1)))
                 .isInstanceOf(IllegalStateException.class);

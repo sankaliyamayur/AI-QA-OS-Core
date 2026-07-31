@@ -1,6 +1,8 @@
 package com.aiqaos.execution.queue;
 
 import com.aiqaos.core.model.ExecutionResult;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
@@ -17,8 +19,12 @@ public class ExecutionJobResult {
     private final List<String> artifactKeys;
     private final String errorMessage;
 
-    private ExecutionJobResult(String jobId, boolean success, ExecutionResult result,
-                               List<String> artifactKeys, String errorMessage) {
+    @JsonCreator
+    private ExecutionJobResult(@JsonProperty("jobId") String jobId,
+                               @JsonProperty("success") boolean success,
+                               @JsonProperty("result") ExecutionResult result,
+                               @JsonProperty("artifactKeys") List<String> artifactKeys,
+                               @JsonProperty("errorMessage") String errorMessage) {
         this.jobId = jobId;
         this.success = success;
         this.result = result;

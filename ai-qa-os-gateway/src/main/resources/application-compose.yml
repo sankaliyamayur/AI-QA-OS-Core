@@ -32,6 +32,13 @@ aiqaos:
     # SCALE-2 (ADR-064): default in-process. Set AIQAOS_EVENTS_TRANSPORT=kafka (with the compose Kafka
     # up) to run the distributed EventBus — a BaseEvent published on one instance reaches all instances.
     transport: ${AIQAOS_EVENTS_TRANSPORT:in-process}
+  execution:
+    queue:
+      # SCALE-1 (ADR-065): default OFF (inline execution, unchanged). Set AIQAOS_EXECUTION_QUEUE_ENABLED=true
+      # (provider defaults redis) with the compose Redis up to distribute execution jobs across instances
+      # via Redis Streams — any worker picks up any job; results return to the submitter.
+      enabled: ${AIQAOS_EXECUTION_QUEUE_ENABLED:false}
+      provider: ${AIQAOS_EXECUTION_QUEUE_PROVIDER:redis}
   memory:
     shortterm:
       provider: redis               # T5: RedisMemoryStore (starter present via brain->memory);
