@@ -48,6 +48,8 @@
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <lombok.version>1.18.34</lombok.version>
         <archunit.version>1.3.0</archunit.version>
+        <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
+        <awssdk.version>2.28.0</awssdk.version>
     </properties>
 
     <dependencyManagement>
@@ -74,6 +76,14 @@
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <!-- ENT-5 (ADR-068): AWS SDK v2 BOM — keeps the optional S3 deps versionless + consistent. -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

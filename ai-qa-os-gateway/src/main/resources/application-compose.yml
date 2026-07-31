@@ -6,7 +6,9 @@
 # memory at the compose Redis. The vector store stays on the in-memory default: the QdrantStoreClient
 # is still a no-op stub (real Qdrant binding is deferred to SCALE-3 completion), so switching to it
 # would DEGRADE dev, not improve it. The distributed EventBus over Kafka (SCALE-2 / ADR-064) is now
-# available but OPT-IN — set AIQAOS_EVENTS_TRANSPORT=kafka to enable it. The MinIO binding stays deferred.
+# available but OPT-IN — set AIQAOS_EVENTS_TRANSPORT=kafka to enable it. The durable object store over the
+# compose MinIO (ENT-5 / ADR-068) is likewise OPT-IN — set AIQAOS_ARTIFACTS_STORE=object with
+# AIQAOS_ARTIFACTS_OBJECT_PROVIDER=s3 (S3 creds below) to use it; default stays the local single-host store.
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple}
@@ -39,6 +41,21 @@ aiqaos:
       # via Redis Streams — any worker picks up any job; results return to the submitter.
       enabled: ${AIQAOS_EXECUTION_QUEUE_ENABLED:false}
       provider: ${AIQAOS_EXECUTION_QUEUE_PROVIDER:redis}
+  artifacts:
+    # ENT-5 (ADR-068): default local single-host store (unchanged). Set AIQAOS_ARTIFACTS_STORE=object +
+    # AIQAOS_ARTIFACTS_OBJECT_PROVIDER=s3 with the compose MinIO up to store artifacts durably in shared
+    # object storage (cross-host reachable — the SCALE-1 artifact unblock at the storage layer).
+    store: ${AIQAOS_ARTIFACTS_STORE:local}
+    object:
+      provider: ${AIQAOS_ARTIFACTS_OBJECT_PROVIDER:in-memory}
+      s3:
+        # SEC-2: creds injected from env/.env (MinIO dev defaults), never committed. MinIO needs path-style.
+        bucket: ${AIQAOS_ARTIFACTS_S3_BUCKET:aiqaos-artifacts}
+        endpoint: ${AIQAOS_ARTIFACTS_S3_ENDPOINT:http://localhost:9000}
+        region: ${AIQAOS_ARTIFACTS_S3_REGION:us-east-1}
+        access-key: ${AIQAOS_ARTIFACTS_S3_ACCESS_KEY:${MINIO_ROOT_USER:minioadmin}}
+        secret-key: ${AIQAOS_ARTIFACTS_S3_SECRET_KEY:${MINIO_ROOT_PASSWORD:minioadmin}}
+        path-style-access: true
   memory:
     shortterm:
       provider: redis               # T5: RedisMemoryStore (starter present via brain->memory);

@@ -34,6 +34,20 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- ENT-5 (ADR-068): real object-storage binding over the S3 API (MinIO today, AWS S3 later).
+             Optional — not transitive, so modules that don't opt in carry no AWS weight;
+             S3ObjectStorageClient is @ConditionalOnClass(S3Client) + @ConditionalOnExpression(provider=s3).
+             url-connection-client is the minimal JDK-based sync HTTP client for the S3Client. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

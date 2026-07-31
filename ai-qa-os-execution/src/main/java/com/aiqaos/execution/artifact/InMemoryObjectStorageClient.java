@@ -6,19 +6,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
  * ENT-5 reference {@link ObjectStorageClient}: a map-backed store proving the object-storage
- * {@link ArtifactStore} wiring end-to-end. Active only when object storage is selected
- * ({@code aiqaos.artifacts.store=object}) and no real client bean is present — a real S3/GCS client
- * (a future bean) overrides it via {@link ConditionalOnMissingBean}. Not durable — for tests/local.
+ * {@link ArtifactStore} wiring end-to-end. Active when object storage is selected
+ * ({@code aiqaos.artifacts.store=object}) and the S3 provider is NOT chosen — the inverse of
+ * {@link S3ObjectStorageClient}'s guard (ADR-068), so exactly one client bean is active regardless
+ * of component-scan order (more robust than {@code @ConditionalOnMissingBean} on a scanned component).
+ * Not durable — for tests/local.
  */
 @Component
-@ConditionalOnProperty(name = "aiqaos.artifacts.store", havingValue = "object")
-@ConditionalOnMissingBean(ObjectStorageClient.class)
+@ConditionalOnExpression(
+        "'${aiqaos.artifacts.store:}' == 'object' and '${aiqaos.artifacts.object.provider:in-memory}' != 's3'")
 public class InMemoryObjectStorageClient implements ObjectStorageClient {
 
     private record Entry(byte[] content, Instant lastModified) {
