@@ -1,13 +1,24 @@
 package com.aiqaos.memory.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
 import jakarta.persistence.*;
 import java.util.HashMap;
 import java.util.Map;
 
 @Entity
 @Table(name = "memory_nodes")
-public class MemoryNodeEntity extends BaseEntity {
+public class MemoryNodeEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-E: tenant discriminator (ADR-054/056) — Hibernate stamps on insert, filters on read.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
+
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     @Lob
     @Column(name = "content", nullable = false)

@@ -1,5 +1,7 @@
 package com.aiqaos.security.auth;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import com.aiqaos.security.jwt.JwtTokenProvider;
 import com.aiqaos.security.rbac.UserEntity;
 import com.aiqaos.security.rbac.UserRepository;
@@ -67,6 +69,9 @@ public class AuthenticationService {
         UserSessionEntity session = new UserSessionEntity();
         session.setSessionId(sessionId);
         session.setUserId(user.getId());
+        // FI-ENT1-D slice 2 (ADR-058): set the tenant explicitly — the session is attribution-only
+        // (no @TenantId), so Hibernate does not stamp it. It carries the authenticated user's tenant.
+        session.setTenantId(user.getTenantId());
         session.setIpAddress(ipAddress);
         session.setBrowser(browser);
         session.setDevice(device);
@@ -87,6 +92,8 @@ public class AuthenticationService {
     }
 
     public TokenResponseDTO refresh(String refreshToken) {
+        // The session is found tenant-agnostically by its unguessable refresh token (attribution-only,
+        // no @TenantId) — so refresh works even when no tenant is bound (expired access token).
         UserSessionEntity session = userSessionRepository.findByRefreshToken(refreshToken)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
@@ -94,17 +101,29 @@ public class AuthenticationService {
             throw new RuntimeException("Session has been terminated");
         }
 
-        UserEntity user = userRepository.findById(session.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // FI-ENT1-D slice 2 (ADR-058): the session (a credential) resolves the tenant — bind it so the
+        // tenant-scoped user lookup (@TenantId on UserEntity) and token minting run under the right tenant.
+        TenantContext previous = TenantContextHolder.current().orElse(null);
+        TenantContextHolder.set(TenantContext.ofTenant(session.getTenantId()));
+        try {
+            UserEntity user = userRepository.findById(session.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Generate rotated token pair
-        String newAccessToken = jwtTokenProvider.generateAccessToken(user, session.getSessionId(), 1);
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user, session.getSessionId());
+            // Generate rotated token pair
+            String newAccessToken = jwtTokenProvider.generateAccessToken(user, session.getSessionId(), 1);
+            String newRefreshToken = jwtTokenProvider.generateRefreshToken(user, session.getSessionId());
 
-        session.setRefreshToken(newRefreshToken);
-        session.setLastActivity(LocalDateTime.now());
-        userSessionRepository.save(session);
+            session.setRefreshToken(newRefreshToken);
+            session.setLastActivity(LocalDateTime.now());
+            userSessionRepository.save(session);
 
-        return new TokenResponseDTO(newAccessToken, newRefreshToken);
+            return new TokenResponseDTO(newAccessToken, newRefreshToken);
+        } finally {
+            if (previous != null) {
+                TenantContextHolder.set(previous);
+            } else {
+                TenantContextHolder.clear();
+            }
+        }
     }
 }

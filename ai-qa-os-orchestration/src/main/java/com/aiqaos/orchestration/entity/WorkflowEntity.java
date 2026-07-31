@@ -1,13 +1,24 @@
 package com.aiqaos.orchestration.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "workflows")
-public class WorkflowEntity extends BaseEntity {
+public class WorkflowEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-C ext: tenant discriminator (ADR-054/057) — Hibernate stamps on insert, filters on read.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
+
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     @Column(name = "workflow_name", nullable = false)
     private String workflowName;

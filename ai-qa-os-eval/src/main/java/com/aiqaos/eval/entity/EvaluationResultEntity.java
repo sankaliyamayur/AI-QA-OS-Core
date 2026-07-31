@@ -1,6 +1,8 @@
 package com.aiqaos.eval.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -13,7 +15,16 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "eval_results")
-public class EvaluationResultEntity extends BaseEntity {
+public class EvaluationResultEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-C ext: tenant discriminator (ADR-054/057) — Hibernate stamps on insert, filters on read.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
+
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     @Column(name = "result_id", nullable = false)
     private UUID resultId;

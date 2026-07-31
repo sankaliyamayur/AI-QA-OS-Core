@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -19,11 +22,16 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @Table(name = "modules")
 @Data
 @EntityListeners(AuditingEntityListener.class)
-public class ModuleEntity {
+public class ModuleEntity implements Tenanted {
 
     @Id
     @Column(length = 50, nullable = false)
     private String id;
+
+    // FI-ENT1-C: tenant discriminator — Hibernate stamps it on insert and filters it on read (ADR-054).
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
 
     @Column(nullable = false)
     private String name;
@@ -60,6 +68,9 @@ public class ModuleEntity {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }

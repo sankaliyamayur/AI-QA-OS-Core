@@ -73,6 +73,13 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- PE-3: aggregate persisted eval results into the prompt-quality read-model (ADR-062). -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-eval</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -1,5 +1,6 @@
 package com.aiqaos.dashboard.controller;
 
+import com.aiqaos.dashboard.dto.HealingAnalyticsSummary;
 import com.aiqaos.dashboard.dto.HealingMetricDTO;
 import com.aiqaos.dashboard.service.HealingAnalyticsService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,5 +30,11 @@ public class HealingAnalyticsController {
     @GetMapping("/summary")
     public Map<String, Long> getActionTypeBreakdown() {
         return healingAnalyticsService.getActionTypeBreakdown();
+    }
+
+    /** HEAL-3: the full healing-analytics read-model (counts, success rate, avg improvement, breakdowns). */
+    @GetMapping("/analytics")
+    public HealingAnalyticsSummary getAnalyticsSummary() {
+        return healingAnalyticsService.getSummary();
     }
 }

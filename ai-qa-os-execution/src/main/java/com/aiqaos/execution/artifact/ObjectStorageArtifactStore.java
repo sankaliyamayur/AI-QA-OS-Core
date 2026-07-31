@@ -1,5 +1,7 @@
 package com.aiqaos.execution.artifact;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,9 +46,10 @@ public class ObjectStorageArtifactStore implements ArtifactStore {
 
     @Override
     public List<String> list(String keyPrefix) {
-        String full = prefix + (keyPrefix == null ? "" : keyPrefix);
+        String tenantPrefix = tenantPrefix();
+        String full = tenantPrefix + (keyPrefix == null ? "" : keyPrefix);
         return client.list(full).stream()
-                .map(k -> k.startsWith(prefix) ? k.substring(prefix.length()) : k)
+                .map(k -> k.startsWith(tenantPrefix) ? k.substring(tenantPrefix.length()) : k)
                 .collect(Collectors.toList());
     }
 
@@ -67,6 +70,17 @@ public class ObjectStorageArtifactStore implements ArtifactStore {
         if (key.contains("..")) {
             throw new IllegalArgumentException("Illegal artifact key: " + key);
         }
-        return prefix + key;
+        return tenantPrefix() + key;
+    }
+
+    /**
+     * FI-ENT1-E (ADR-056): namespaces blob keys by the current tenant so tenant A cannot read tenant
+     * B's bytes by key. Unbound / platform work uses the system tenant, matching the persistence model.
+     */
+    private String tenantPrefix() {
+        String tenant = TenantContextHolder.current()
+                .map(TenantContext::getTenantId)
+                .orElse(TenantContext.SYSTEM_TENANT);
+        return prefix + tenant + "/";
     }
 }

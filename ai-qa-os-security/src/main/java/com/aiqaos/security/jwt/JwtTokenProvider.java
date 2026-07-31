@@ -77,7 +77,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("username", user.getUsername())
-                .claim("tenantId", user.getTenantId() != null ? user.getTenantId().toString() : null)
+                .claim("tenantId", user.getTenantId()) // FI-ENT1-D: String tenant id (matches TenantContext)
                 .claim("organizationId", user.getOrganizationId() != null ? user.getOrganizationId().toString() : null)
                 .claim("workspaceId", user.getWorkspaceId() != null ? user.getWorkspaceId().toString() : null)
                 .claim("sessionId", sessionId.toString())

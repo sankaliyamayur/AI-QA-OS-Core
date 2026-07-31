@@ -1,24 +1,31 @@
 package com.aiqaos.security.rbac;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.TenantId;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "security_users")
-public class UserEntity extends BaseEntity {
+@Table(name = "security_users", uniqueConstraints = {
+        // FI-ENT1-D: identity is unique WITHIN a tenant, not globally (acme/alice ≠ beta/alice).
+        @UniqueConstraint(name = "ux_users_tenant_username", columnNames = {"tenant_id", "username"}),
+        @UniqueConstraint(name = "ux_users_tenant_email", columnNames = {"tenant_id", "email"})
+})
+public class UserEntity extends BaseEntity implements Tenanted {
 
-    @Column(name = "username", nullable = false, unique = true)
+    @Column(name = "username", nullable = false)
     private String username;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = false)
     private String email;
 
     @Column(name = "password_hash", nullable = false)
@@ -28,8 +35,11 @@ public class UserEntity extends BaseEntity {
     private boolean enabled = true;
 
     // SaaS Multi-Tenancy fields
-    @Column(name = "tenant_id")
-    private UUID tenantId;
+    // FI-ENT1-C/D: tenant discriminator (ADR-054/055) — String, matching TenantContext; Hibernate
+    // stamps it on insert and filters it on read. Reconciled from the earlier UUID column via V18.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
 
     @Column(name = "organization_id")
     private UUID organizationId;
@@ -67,8 +77,9 @@ public class UserEntity extends BaseEntity {
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
-    public UUID getTenantId() { return tenantId; }
-    public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public UUID getOrganizationId() { return organizationId; }
     public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
     public UUID getWorkspaceId() { return workspaceId; }

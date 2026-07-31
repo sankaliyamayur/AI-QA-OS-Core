@@ -7,7 +7,8 @@ import java.util.UUID;
 
 public class MemoryMetadata {
     private UUID id;
-    private UUID tenantId;
+    // FI-ENT1-E: String tenant id, matching TenantContext / @TenantId (was UUID; no external callers).
+    private String tenantId;
     private String project;
     private String module;
     private String documentType;
@@ -22,8 +23,8 @@ public class MemoryMetadata {
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
-    public UUID getTenantId() { return tenantId; }
-    public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public String getProject() { return project; }
     public void setProject(String project) { this.project = project; }
     public String getModule() { return module; }

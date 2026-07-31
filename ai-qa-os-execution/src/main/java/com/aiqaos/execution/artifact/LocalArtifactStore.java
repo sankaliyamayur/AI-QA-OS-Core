@@ -1,5 +1,7 @@
 package com.aiqaos.execution.artifact;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -17,7 +19,7 @@ import org.springframework.stereotype.Component;
  * directory (the existing {@code playwright-output/}). Keys are validated so they cannot escape the
  * base dir. ENT-5 adds an object-storage impl behind the same seam ({@link ObjectStorageArtifactStore}).
  *
- * <p>Default store (active unless {@code aiqaos.artifacts.store=object}).
+ * <p>FI-ENT1-E (ADR-056): tenant-scoped local artifact storage paths under {@code <baseDir>/<tenant>/<key>}.
  */
 @Component
 @ConditionalOnProperty(name = "aiqaos.artifacts.store", havingValue = "local", matchIfMissing = true)
@@ -59,12 +61,16 @@ public class LocalArtifactStore implements ArtifactStore {
 
     @Override
     public List<String> list(String prefix) {
-        if (!Files.exists(baseDir)) {
+        String tenant = TenantContextHolder.current()
+                .map(TenantContext::getTenantId)
+                .orElse(TenantContext.SYSTEM_TENANT);
+        Path tenantDir = baseDir.resolve(tenant).normalize();
+        if (!Files.exists(tenantDir)) {
             return List.of();
         }
-        try (Stream<Path> walk = Files.walk(baseDir)) {
+        try (Stream<Path> walk = Files.walk(tenantDir)) {
             return walk.filter(Files::isRegularFile)
-                    .map(p -> baseDir.relativize(p).toString().replace('\\', '/'))
+                    .map(p -> tenantDir.relativize(p).toString().replace('\\', '/'))
                     .filter(key -> prefix == null || prefix.isEmpty() || key.startsWith(prefix))
                     .collect(Collectors.toList());
         } catch (IOException e) {
@@ -90,13 +96,20 @@ public class LocalArtifactStore implements ArtifactStore {
         }
     }
 
-    /** Resolve a key under the base dir, rejecting traversal/absolute keys. */
+    /** Resolve a key under the tenant's subdirectory, rejecting traversal/absolute keys. */
     private Path safeResolve(String key) {
         if (key == null || key.isBlank()) {
             throw new IllegalArgumentException("Artifact key must not be blank");
         }
-        Path resolved = baseDir.resolve(key).normalize();
-        if (!resolved.startsWith(baseDir)) {
+        if (key.contains("..")) {
+            throw new IllegalArgumentException("Illegal artifact key (escapes base dir): " + key);
+        }
+        String tenant = TenantContextHolder.current()
+                .map(TenantContext::getTenantId)
+                .orElse(TenantContext.SYSTEM_TENANT);
+        Path tenantDir = baseDir.resolve(tenant).normalize();
+        Path resolved = tenantDir.resolve(key).normalize();
+        if (!resolved.startsWith(tenantDir)) {
             throw new IllegalArgumentException("Illegal artifact key (escapes base dir): " + key);
         }
         return resolved;

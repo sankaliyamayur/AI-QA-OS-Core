@@ -20,8 +20,9 @@ class ObjectStorageArtifactStoreTest {
 
         assertThat(store.exists("run-1/chromium/shot.png")).isTrue();
         assertThat(store.resolve("run-1/chromium/shot.png")).isEqualTo(content);
-        // The underlying client key is namespaced under the prefix.
-        assertThat(client.exists("artifacts/run-1/chromium/shot.png")).isTrue();
+        // FI-ENT1-E: the underlying client key is namespaced under the prefix AND the current tenant
+        // (no tenant bound here → the system tenant).
+        assertThat(client.exists("artifacts/__system__/run-1/chromium/shot.png")).isTrue();
     }
 
     @Test

@@ -1,13 +1,26 @@
 package com.aiqaos.observability.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "observability_llm_costs")
-public class LLMCostEntity extends BaseEntity {
+public class LLMCostEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-E: tenant discriminator (ADR-054/056) — per-tenant LLM cost isolation.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
+
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
+
     private String requestId;
     private String agentType;
     private String purpose;

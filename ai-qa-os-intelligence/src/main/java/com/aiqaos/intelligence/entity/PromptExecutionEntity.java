@@ -1,6 +1,8 @@
 package com.aiqaos.intelligence.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
+import org.hibernate.annotations.TenantId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Lob;
@@ -9,7 +11,16 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "prompt_executions")
-public class PromptExecutionEntity extends BaseEntity {
+public class PromptExecutionEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-C ext: tenant discriminator (ADR-054/057) — Hibernate stamps on insert, filters on read.
+    @TenantId
+    @Column(name = "tenant_id", length = 64, nullable = false, updatable = false)
+    private String tenantId;
+
+    @Override
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     @Column(name = "template_id")
     private UUID templateId;

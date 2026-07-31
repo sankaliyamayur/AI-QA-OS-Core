@@ -15,7 +15,11 @@ import org.junit.jupiter.api.io.TempDir;
 class ArtifactRetentionServiceTest {
 
     private static void ageArtifact(Path dir, String key, int days) throws Exception {
-        Files.setLastModifiedTime(dir.resolve(key), FileTime.from(Instant.now().minus(Duration.ofDays(days))));
+        Path path = dir.resolve(key);
+        if (!Files.exists(path)) {
+            path = dir.resolve("__system__").resolve(key);
+        }
+        Files.setLastModifiedTime(path, FileTime.from(Instant.now().minus(Duration.ofDays(days))));
     }
 
     @Test

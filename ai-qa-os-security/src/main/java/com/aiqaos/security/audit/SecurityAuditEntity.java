@@ -10,6 +10,9 @@ import java.time.LocalDateTime;
 @Table(name = "security_audit_logs")
 public class SecurityAuditEntity extends BaseEntity {
 
+    @Column(name = "tenant_id")
+    private String tenantId;
+
     @Column(name = "user_id")
     private String userId;
 
@@ -34,6 +37,8 @@ public class SecurityAuditEntity extends BaseEntity {
     @Column(name = "request_payload", length = 1000)
     private String requestPayload;
 
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getAgentId() { return agentId; }

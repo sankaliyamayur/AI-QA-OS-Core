@@ -46,6 +46,14 @@ public class TenantContextFilter implements Filter {
         HttpServletRequest httpReq = (HttpServletRequest) request;
         HttpServletResponse httpResp = (HttpServletResponse) response;
 
+        // FI-ENT1-D: if a tenant is already bound (the authenticated request's JWT tenant, set by
+        // JwtAuthenticationFilter — authoritative and trusted), honour it and ignore the untrusted
+        // X-Tenant-ID header. This keeps tenant resolution correct regardless of filter ordering.
+        if (TenantContextHolder.current().isPresent()) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String tenantId = httpReq.getHeader(TENANT_HEADER);
         if (tenantId == null || tenantId.isBlank()) {
             chain.doFilter(request, response); // no tenant → proceed unbound

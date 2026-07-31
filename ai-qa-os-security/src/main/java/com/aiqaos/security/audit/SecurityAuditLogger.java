@@ -1,5 +1,7 @@
 package com.aiqaos.security.audit;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,10 @@ public class SecurityAuditLogger {
     @Async
     public void logEvent(UUID userId, SecurityEventType eventType, String result, String ipAddress, String payload) {
         SecurityAuditEntity audit = new SecurityAuditEntity();
+        String tenantId = TenantContextHolder.current()
+                .map(TenantContext::getTenantId)
+                .orElse(TenantContext.SYSTEM_TENANT);
+        audit.setTenantId(tenantId);
         audit.setUserId(userId != null ? userId.toString() : "ANONYMOUS");
         audit.setAction(eventType.name());
         audit.setResult(result);

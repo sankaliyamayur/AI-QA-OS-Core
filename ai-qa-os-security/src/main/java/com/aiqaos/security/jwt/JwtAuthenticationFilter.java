@@ -1,5 +1,7 @@
 package com.aiqaos.security.jwt;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import com.aiqaos.security.rbac.UserEntity;
 import com.aiqaos.security.rbac.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -35,38 +37,65 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
-
+        Claims claims = null;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtTokenProvider.validateToken(token)) {
-                Claims claims = jwtTokenProvider.getClaimsFromToken(token);
-                String userId = claims.getSubject();
-
-                if (userRepository != null) {
-                    UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
-                    if (user != null && user.isEnabled() && !user.isAccountLocked()) {
-                        // SEC-1: authenticated principals carry a baseline ROLE_USER authority.
-                        // Fine-grained role/permission binding is deferred (no user->role model yet).
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                user, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                        );
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    }
-                } else {
-                    String username = claims.get("username", String.class);
-                    if (username == null) {
-                        username = userId;
-                    }
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            username, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
+                claims = jwtTokenProvider.getClaimsFromToken(token);
             }
         }
 
-        filterChain.doFilter(request, response);
+        if (claims == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // FI-ENT1-D (ADR-055): for an authenticated request the tenant comes from the SIGNED token,
+        // never the spoofable X-Tenant-ID header. Bind it authoritatively for the whole downstream leg
+        // so the user load below is tenant-filtered (@TenantId) — a token minted for tenant A cannot
+        // resolve a user in tenant B (→ 401). Restore the previous context after (mirrors the gateway
+        // filter's discipline); the gateway TenantContextFilter yields to an already-bound tenant.
+        String tokenTenant = claims.get("tenantId", String.class);
+        TenantContext previous = TenantContextHolder.current().orElse(null);
+        TenantContext tenantCtx = (tokenTenant != null && !tokenTenant.isBlank())
+                ? TenantContext.ofTenant(tokenTenant) : TenantContext.system();
+        TenantContextHolder.set(tenantCtx);
+        try {
+            authenticate(claims, request);
+            filterChain.doFilter(request, response);
+        } finally {
+            if (previous != null) {
+                TenantContextHolder.set(previous);
+            } else {
+                TenantContextHolder.clear();
+            }
+        }
+    }
+
+    /** Loads the token's principal (tenant-filtered) and binds it into the Spring {@code SecurityContext}. */
+    private void authenticate(Claims claims, HttpServletRequest request) {
+        String userId = claims.getSubject();
+        if (userRepository != null) {
+            UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
+            if (user != null && user.isEnabled() && !user.isAccountLocked()) {
+                // SEC-1: authenticated principals carry a baseline ROLE_USER authority.
+                // Fine-grained role/permission binding is deferred (no user->role model yet).
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        user, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } else {
+            String username = claims.get("username", String.class);
+            if (username == null) {
+                username = userId;
+            }
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    username, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+            );
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
     }
 }

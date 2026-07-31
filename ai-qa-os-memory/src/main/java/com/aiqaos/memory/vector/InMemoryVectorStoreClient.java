@@ -1,5 +1,7 @@
 package com.aiqaos.memory.vector;
 
+import com.aiqaos.core.tenant.TenantContext;
+import com.aiqaos.core.tenant.TenantContextHolder;
 import com.aiqaos.memory.model.MemoryMetadata;
 import com.aiqaos.memory.model.MemoryNodeDTO;
 import com.aiqaos.memory.model.VectorSearchResult;
@@ -13,6 +15,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * FI-ENT1-E (ADR-056): in-memory vector search matches are filtered by tenant context so queries for tenant A
+ * do not return embeddings belonging to tenant B.
+ */
 @Component
 @ConditionalOnProperty(name = "aiqaos.memory.vector.provider", havingValue = "in-memory", matchIfMissing = true)
 public class InMemoryVectorStoreClient implements VectorStoreClient {
@@ -35,8 +41,17 @@ public class InMemoryVectorStoreClient implements VectorStoreClient {
         List<VectorItem> items = storage.get(collection);
         if (items == null) return Collections.emptyList();
 
+        String targetTenant = TenantContextHolder.current()
+                .map(TenantContext::getTenantId)
+                .orElse(filters != null ? filters.getTenantId() : null);
+
         List<VectorSearchResult> results = new ArrayList<>();
         for (VectorItem item : items) {
+            if (targetTenant != null && item.metadata != null && item.metadata.getTenantId() != null) {
+                if (!targetTenant.equals(item.metadata.getTenantId())) {
+                    continue;
+                }
+            }
             double score = similarityCalculator.cosineSimilarity(queryEmbedding, item.embedding);
             MemoryNodeDTO node = new MemoryNodeDTO();
             node.setId(UUID.fromString(item.id));

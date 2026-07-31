@@ -45,7 +45,7 @@ public class JwtTokenProviderTest {
         UserEntity user = new UserEntity();
         user.setId(UUID.randomUUID());
         user.setUsername("qa_engineer");
-        user.setTenantId(UUID.randomUUID());
+        user.setTenantId("acme"); // FI-ENT1-D: tenant id is now a String discriminator
 
         UUID sessionId = UUID.randomUUID();
         String token = jwtTokenProvider.generateAccessToken(user, sessionId, 1);

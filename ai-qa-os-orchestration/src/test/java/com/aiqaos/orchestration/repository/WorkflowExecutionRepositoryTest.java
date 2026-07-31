@@ -1,9 +1,11 @@
 package com.aiqaos.orchestration.repository;
 
+import com.aiqaos.core.tenant.TenantHibernateCustomizer;
 import com.aiqaos.orchestration.entity.WorkflowExecutionEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
@@ -13,7 +15,10 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// FI-ENT1-C: WorkflowExecutionEntity now carries @TenantId, so Hibernate needs the tenant resolver.
+// A @DataJpaTest slice doesn't scan @Components, so import the customizer that registers it (ADR-054).
 @DataJpaTest
+@Import(TenantHibernateCustomizer.class)
 class WorkflowExecutionRepositoryTest {
 
     @Autowired

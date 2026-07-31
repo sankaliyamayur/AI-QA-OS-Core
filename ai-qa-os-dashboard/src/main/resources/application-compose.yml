@@ -1,0 +1,21 @@
+# Phase 1 (Checkpoint 2 / T3-T4): run the dashboard locally against the docker-compose Postgres.
+#
+# Activate with:  SPRING_PROFILES_ACTIVE=compose
+# Same datasource as the gateway (both apps share the ai_qa_os_dashboard schema), but the dashboard
+# is NOT a Flyway owner — the gateway performs all migrations (ADR-024), so the dashboard only reads
+# the already-migrated schema and validates against it. Boot the gateway FIRST so V1..V16 exist.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple}
+    username: ${SPRING_DATASOURCE_USERNAME:qaosuser}
+    password: ${SPRING_DATASOURCE_PASSWORD:qaoslocaldev}
+  jpa:
+    hibernate:
+      ddl-auto: validate            # validates against the gateway-migrated schema; never generates
+  flyway:
+    enabled: false                  # dashboard is NOT the migration owner (ADR-024) — no dual migrate
+
+aiqaos:
+  security:
+    # Frictionless local dev by default; set AIQAOS_SECURITY_ENABLED=true to exercise SEC-1 auth.
+    enabled: ${AIQAOS_SECURITY_ENABLED:false}

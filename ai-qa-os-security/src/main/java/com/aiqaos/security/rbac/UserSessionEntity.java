@@ -1,6 +1,7 @@
 package com.aiqaos.security.rbac;
 
 import com.aiqaos.core.entity.BaseEntity;
+import com.aiqaos.core.tenant.Tenanted;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -9,7 +10,14 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "security_user_sessions")
-public class UserSessionEntity extends BaseEntity {
+public class UserSessionEntity extends BaseEntity implements Tenanted {
+
+    // FI-ENT1-D slice 2 (ADR-058): tenant ATTRIBUTION only — deliberately NOT @TenantId. A session is a
+    // credential looked up by its unguessable refresh token BEFORE any tenant is bound (e.g. refresh
+    // with an expired access token), so a discriminator would filter the lookup by the wrong/system
+    // tenant and break refresh. The auth flow sets this at login and binds the tenant from it on refresh.
+    @Column(name = "tenant_id", nullable = false)
+    private String tenantId;
 
     @Column(name = "session_id", nullable = false, unique = true)
     private UUID sessionId;
@@ -61,4 +69,6 @@ public class UserSessionEntity extends BaseEntity {
     public void setActive(boolean active) { this.active = active; }
     public String getRefreshToken() { return refreshToken; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    @Override public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 }
