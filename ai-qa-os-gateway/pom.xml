@@ -110,6 +110,12 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+        <!-- SCALE-2 (ADR-064): opt in to the distributed EventBus. Provides KafkaTemplate + autoconfig so
+             core's KafkaEventBus activates when aiqaos.events.transport=kafka; default stays in-process. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

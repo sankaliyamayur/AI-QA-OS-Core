@@ -5,8 +5,8 @@
 # Postgres), keeps the gateway as the sole Flyway migration owner (ADR-024), and points short-term
 # memory at the compose Redis. The vector store stays on the in-memory default: the QdrantStoreClient
 # is still a no-op stub (real Qdrant binding is deferred to SCALE-3 completion), so switching to it
-# would DEGRADE dev, not improve it. Kafka/MinIO Java bindings are likewise deferred until a real
-# consumer exists (see Checkpoint 3 notes) — the containers are up and ready for when they land.
+# would DEGRADE dev, not improve it. The distributed EventBus over Kafka (SCALE-2 / ADR-064) is now
+# available but OPT-IN — set AIQAOS_EVENTS_TRANSPORT=kafka to enable it. The MinIO binding stays deferred.
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple}
@@ -22,8 +22,16 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost} # compose Redis; RedisMemoryStore degrades gracefully if down
       port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092} # only used when events.transport=kafka
+    consumer:
+      auto-offset-reset: latest
 
 aiqaos:
+  events:
+    # SCALE-2 (ADR-064): default in-process. Set AIQAOS_EVENTS_TRANSPORT=kafka (with the compose Kafka
+    # up) to run the distributed EventBus — a BaseEvent published on one instance reaches all instances.
+    transport: ${AIQAOS_EVENTS_TRANSPORT:in-process}
   memory:
     shortterm:
       provider: redis               # T5: RedisMemoryStore (starter present via brain->memory);
