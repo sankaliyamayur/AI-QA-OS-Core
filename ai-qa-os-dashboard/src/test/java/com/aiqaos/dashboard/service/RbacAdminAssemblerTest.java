@@ -17,11 +17,13 @@ class RbacAdminAssemblerTest {
 
     private UserEntity user(String name, String email, boolean enabled, boolean mfa, boolean locked) {
         UserEntity u = new UserEntity();
+        u.setId(java.util.UUID.randomUUID());
         u.setUsername(name);
         u.setEmail(email);
         u.setEnabled(enabled);
         u.setMfaEnabled(mfa);
         u.setAccountLocked(locked);
+        u.setRoles(java.util.List.of("ADMIN"));
         return u;
     }
 
@@ -61,6 +63,9 @@ class RbacAdminAssemblerTest {
         assertThat(v.isEnabled()).isTrue();
         assertThat(v.isMfaEnabled()).isTrue();
         assertThat(v.isAccountLocked()).isFalse();
+        // FI-ENT4-A: id (for write targeting) + roles (for the role editor) are carried, secret-free.
+        assertThat(v.getId()).isNotNull();
+        assertThat(v.getRoles()).containsExactly("ADMIN");
     }
 
     @Test

@@ -65,6 +65,7 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
             admin.setEmail(email);
             admin.setPasswordHash(new BCryptPasswordEncoder().encode(password));
             admin.setEnabled(true);
+            admin.setRoles(java.util.List.of("ADMIN")); // FI-ENT4-C (ADR-066): a real ADMIN principal
             userRepository.save(admin);
             log.info("SEC-1: created bootstrap admin user '{}'.", username);
         } catch (Exception ex) {

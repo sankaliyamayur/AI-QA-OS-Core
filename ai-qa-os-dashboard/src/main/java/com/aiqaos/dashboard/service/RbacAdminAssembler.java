@@ -33,8 +33,8 @@ public class RbacAdminAssembler {
                 if (!u.isEnabled()) disabled++;
                 if (u.isAccountLocked()) locked++;
                 if (u.isMfaEnabled()) mfa++;
-                views.add(new AdminUserView(u.getUsername(), u.getEmail(), u.isEnabled(),
-                        u.isMfaEnabled(), u.isAccountLocked()));
+                views.add(new AdminUserView(u.getId(), u.getUsername(), u.getEmail(), u.isEnabled(),
+                        u.isMfaEnabled(), u.isAccountLocked(), u.getRoles()));
             }
         }
 

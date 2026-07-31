@@ -78,10 +78,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (userRepository != null) {
             UserEntity user = userRepository.findById(UUID.fromString(userId)).orElse(null);
             if (user != null && user.isEnabled() && !user.isAccountLocked()) {
-                // SEC-1: authenticated principals carry a baseline ROLE_USER authority.
-                // Fine-grained role/permission binding is deferred (no user->role model yet).
+                // FI-ENT4-C (ADR-066): authorities derived from the user's persisted roles
+                // (ROLE_USER baseline + ROLE_<name> per role) so hasRole('ADMIN') works.
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        user, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                        user, null, com.aiqaos.security.authorization.AuthorityMapper.authorities(user)
                 );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

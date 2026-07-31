@@ -2,10 +2,12 @@ package com.aiqaos.security.rbac;
 
 import com.aiqaos.core.entity.BaseEntity;
 import com.aiqaos.core.tenant.Tenanted;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.TenantId;
@@ -58,6 +60,13 @@ public class UserEntity extends BaseEntity implements Tenanted {
     @Column(name = "backup_code")
     private List<String> backupCodes = new ArrayList<>();
 
+    // FI-ENT4-C (ADR-066): the user's assigned role names (the global catalog, ADR-055). Authorities are
+    // derived as ROLE_<name> at authentication. EAGER so roles are available on load without a round-trip.
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "security_user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role_name")
+    private List<String> roles = new ArrayList<>();
+
     // Account lockout features
     @Column(name = "account_locked", nullable = false)
     private boolean accountLocked = false;
@@ -91,6 +100,8 @@ public class UserEntity extends BaseEntity implements Tenanted {
     public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
     public List<String> getBackupCodes() { return backupCodes; }
     public void setBackupCodes(List<String> backupCodes) { this.backupCodes = backupCodes; }
+    public List<String> getRoles() { return roles; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 
     public boolean isAccountLocked() { return accountLocked; }
     public void setAccountLocked(boolean accountLocked) { this.accountLocked = accountLocked; }
