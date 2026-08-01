@@ -1,10 +1,15 @@
 package com.aiqaos.dashboard.controller;
 
 import com.aiqaos.dashboard.dto.ArtifactDTO;
+import com.aiqaos.execution.artifact.ArtifactStore;
+import com.aiqaos.execution.artifact.ArtifactUploadRequest;
+import com.aiqaos.execution.artifact.ArtifactUploader;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -21,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * ArtifactController
@@ -51,11 +57,20 @@ public class ArtifactController {
     @Value("${aiqaos.dashboard.base-url:http://localhost:8090}")
     private String dashboardBaseUrl;
 
+    /** FI-ENT5-C (ADR-073): when durable upload is on, emit store-URLs that resolve from ArtifactStore. */
+    @Value("${aiqaos.artifacts.upload.enabled:false}")
+    private boolean durableArtifacts;
+
     private final JdbcTemplate jdbc;
 
-    public ArtifactController(JdbcTemplate jdbc, 
+    /** FI-ENT5-C: the durable store (Local or Object); present as a bean, injected via provider. */
+    private final ObjectProvider<ArtifactStore> artifactStoreProvider;
+
+    public ArtifactController(JdbcTemplate jdbc,
+                              ObjectProvider<ArtifactStore> artifactStoreProvider,
                               @Value("${aiqaos.artifacts.base-dir:./playwright-output}") String artifactsBaseDir) {
         this.jdbc = jdbc;
+        this.artifactStoreProvider = artifactStoreProvider;
         File file = new File(artifactsBaseDir);
         if (file.isAbsolute()) {
             this.resolvedBaseDir = file.getAbsolutePath();
@@ -196,6 +211,70 @@ public class ArtifactController {
             .body(resource);
     }
 
+    // ── 4. Durable serving from ArtifactStore (FI-ENT5-C) ─────────────────────
+
+    /**
+     * FI-ENT5-C (ADR-073): serves an artifact's bytes from the durable {@link ArtifactStore} by key
+     * (the {@link ArtifactUploader#keyFor} scheme uploaded by FI-ENT5-A), so artifacts are reachable
+     * cross-host / after local cleanup. Resolution uses the request's bound tenant (system on the open
+     * dashboard) — correct for single-tenant/system deployments; multi-tenant serve-binding is a
+     * follow-on (FI-ENT5-E). Same SEC-4 hardening as file serving.
+     *
+     * Example: GET /api/artifacts/store/executions/&lt;id&gt;/run-2/chromium/TC-AL-003/screenshot
+     */
+    @GetMapping("/api/artifacts/store/**")
+    public ResponseEntity<Resource> serveFromStore(HttpServletRequest request) {
+        String key = request.getRequestURI()
+            .substring(request.getContextPath().length() + "/api/artifacts/store/".length());
+
+        // Security: reject traversal — defence-in-depth on top of ArtifactStore's own key guard.
+        if (key.isBlank() || key.contains("..")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        ArtifactStore store = artifactStoreProvider.getIfAvailable();
+        if (store == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] bytes;
+        try {
+            bytes = store.resolve(key);
+        } catch (Exception e) {
+            // resolve() throws when the key is absent (e.g. Local/Object store) — treat as 404.
+            return ResponseEntity.notFound().build();
+        }
+        if (bytes == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String contentType = contentTypeForKey(key);
+        boolean isHtml = contentType.toLowerCase().contains("text/html");
+        String fileName = key.substring(key.lastIndexOf('/') + 1);
+        String disposition = (isHtml ? "attachment" : "inline") + "; filename=\"" + fileName + "\"";
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+            // SEC-4: a served artifact never needs to load app resources or run scripts.
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Security-Policy", "default-src 'none'; sandbox")
+            .body(new ByteArrayResource(bytes));
+    }
+
+    /** Content type for a durable key, from its trailing {@code /<type>} segment (FI-ENT5-A scheme). */
+    static String contentTypeForKey(String key) {
+        String type = key.substring(key.lastIndexOf('/') + 1);
+        switch (type) {
+            case "screenshot": return "image/png";
+            case "video":      return "video/webm";
+            case "trace":      return "application/zip";
+            case "report":     return "text/html";
+            case "log":        return "text/plain";
+            default:           return MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private ArtifactDTO mapRowToDto(Map<String, Object> row) {
@@ -206,10 +285,10 @@ public class ArtifactController {
             ? (String) row.get("exec_status")
             : "unknown");
 
-        dto.setScreenshotUrl(toArtifactUrl((String) row.get("screenshot_path")));
-        dto.setVideoUrl(toArtifactUrl((String) row.get("video_path")));
-        dto.setTraceUrl(toArtifactUrl((String) row.get("trace_path")));
-        dto.setHtmlReportUrl(toArtifactUrl((String) row.get("report_path")));
+        dto.setScreenshotUrl(artifactUrl(row, "screenshot", (String) row.get("screenshot_path")));
+        dto.setVideoUrl(artifactUrl(row, "video", (String) row.get("video_path")));
+        dto.setTraceUrl(artifactUrl(row, "trace", (String) row.get("trace_path")));
+        dto.setHtmlReportUrl(artifactUrl(row, "report", (String) row.get("report_path")));
 
         // Read log file contents inline (small files, typically < 10 KB)
         String logPath = (String) row.get("log_path");
@@ -223,7 +302,7 @@ public class ArtifactController {
     private List<ArtifactDTO.RunEntry> buildHistory(String testCaseId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
             """
-            SELECT ea.run_number, ea.execution_id::text AS execution_id,
+            SELECT ea.run_number, ea.execution_id::text AS execution_id, ea.test_case_id,
                    ea.browser AS browser, ea.screenshot_path, ea.video_path, ea.trace_path,
                    e.status AS exec_status
             FROM execution_artifacts ea
@@ -241,12 +320,47 @@ public class ArtifactController {
             entry.setExecutionId((String) row.get("execution_id"));
             entry.setBrowser((String) row.get("browser"));
             entry.setStatus(row.get("exec_status") != null ? (String) row.get("exec_status") : "unknown");
-            entry.setScreenshotUrl(toArtifactUrl((String) row.get("screenshot_path")));
-            entry.setVideoUrl(toArtifactUrl((String) row.get("video_path")));
-            entry.setTraceUrl(toArtifactUrl((String) row.get("trace_path")));
+            entry.setScreenshotUrl(artifactUrl(row, "screenshot", (String) row.get("screenshot_path")));
+            entry.setVideoUrl(artifactUrl(row, "video", (String) row.get("video_path")));
+            entry.setTraceUrl(artifactUrl(row, "trace", (String) row.get("trace_path")));
             history.add(entry);
         }
         return history;
+    }
+
+    /**
+     * FI-ENT5-C (ADR-073): picks the artifact URL. When durable upload is enabled and the artifact was
+     * produced (its local path column is non-null), emit the durable store-URL (resolves regardless of
+     * local presence — cross-host); otherwise the local-file URL, unchanged.
+     */
+    private String artifactUrl(Map<String, Object> row, String type, String localPath) {
+        if (durableArtifacts && localPath != null && !localPath.isBlank()) {
+            String executionId = (String) row.get("execution_id");
+            int runNumber = row.get("run_number") != null ? ((Number) row.get("run_number")).intValue() : 1;
+            String browser = (String) row.get("browser");
+            String testCaseId = (String) row.get("test_case_id");
+            String durable = durableUrl(executionId, runNumber, browser, testCaseId, type);
+            if (durable != null) {
+                return durable;
+            }
+        }
+        return toArtifactUrl(localPath);
+    }
+
+    /** Builds the durable store-URL for an artifact using FI-ENT5-A's deterministic key scheme. */
+    private String durableUrl(String executionId, int runNumber, String browser, String testCaseId, String type) {
+        if (executionId == null || executionId.isBlank()) {
+            return null;
+        }
+        try {
+            String key = ArtifactUploader.keyFor(new ArtifactUploadRequest(
+                    UUID.fromString(executionId), testCaseId, browser, runNumber,
+                    null, null, null, null, null), type);
+            return dashboardBaseUrl + "/api/artifacts/store/" + key;
+        } catch (Exception e) {
+            log.warn("Could not build durable artifact URL for {} {}: {}", executionId, type, e.getMessage());
+            return null;
+        }
     }
 
     /**

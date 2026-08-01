@@ -57,6 +57,13 @@
             <artifactId>ai-qa-os-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- FI-ENT5-C (ADR-073): serve the durable artifact copy from ArtifactStore (keyFor from
+             FI-ENT5-A). Explicit dep — the dashboard now directly uses execution's ArtifactStore. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-execution</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-observability</artifactId>
