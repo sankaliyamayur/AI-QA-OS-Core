@@ -46,6 +46,11 @@ aiqaos:
     # AIQAOS_ARTIFACTS_OBJECT_PROVIDER=s3 with the compose MinIO up to store artifacts durably in shared
     # object storage (cross-host reachable — the SCALE-1 artifact unblock at the storage layer).
     store: ${AIQAOS_ARTIFACTS_STORE:local}
+    upload:
+      # FI-ENT5-A (ADR-071): default OFF. Set AIQAOS_ARTIFACTS_UPLOAD_ENABLED=true (with store=object +
+      # object.provider=s3) so ExecutionStep pushes produced artifact files into the durable ArtifactStore
+      # — cross-host reachable. Best-effort; never fails an execution.
+      enabled: ${AIQAOS_ARTIFACTS_UPLOAD_ENABLED:false}
     object:
       provider: ${AIQAOS_ARTIFACTS_OBJECT_PROVIDER:in-memory}
       s3:

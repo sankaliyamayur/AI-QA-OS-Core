@@ -46,6 +46,11 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
     @Autowired(required = false)
     private com.aiqaos.execution.queue.ExecutionJobQueue executionJobQueue;
 
+    // FI-ENT5-A (ADR-071): present only when aiqaos.artifacts.upload.enabled=true — uploads produced
+    // artifact files into the durable ArtifactStore (object storage with ADR-068). Best-effort.
+    @Autowired(required = false)
+    private com.aiqaos.execution.artifact.ArtifactUploader artifactUploader;
+
     // WF-4: fan-out across the browser×shard matrix (always present in the app; null in direct-construction tests).
     @Autowired(required = false)
     private com.aiqaos.execution.scheduler.ShardedExecutionScheduler shardedExecutionScheduler;
@@ -218,6 +223,21 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
                         artifactRepo.save(art);
                         log.info("[ExecutionStep] Saved Playwright artifacts in DB: TC={}, Screenshot={}, Video={}, Run=#{}",
                                  art.getTestCaseId(), art.getScreenshotPath() != null, art.getVideoPath() != null, art.getRunNumber());
+
+                        // FI-ENT5-A (ADR-071): also push the produced files into the durable ArtifactStore
+                        // (cross-host reachable with the S3/MinIO binding). Opt-in + best-effort — never
+                        // let artifact upload break the pipeline.
+                        if (artifactUploader != null) {
+                            try {
+                                artifactUploader.upload(new com.aiqaos.execution.artifact.ArtifactUploadRequest(
+                                        art.getExecutionId(), art.getTestCaseId(), art.getBrowser(), art.getRunNumber(),
+                                        art.getScreenshotPath(), art.getVideoPath(), art.getTracePath(),
+                                        art.getLogPath(), art.getReportPath()));
+                            } catch (Exception ex) {
+                                log.warn("[ExecutionStep] FI-ENT5-A artifact upload failed for {}: {}",
+                                         art.getTestCaseId(), ex.getMessage());
+                            }
+                        }
                                  
                         // Update the TestCaseEntity with latest execution details
                         try {
