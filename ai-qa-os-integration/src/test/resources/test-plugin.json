@@ -1,0 +1,7 @@
+{
+  "id": "com.acme.sample",
+  "version": "2.1.0",
+  "sdkApiVersion": "1.0.0",
+  "capabilities": ["report.export", "test.generate"],
+  "requiredPermissions": ["network.http"]
+}
