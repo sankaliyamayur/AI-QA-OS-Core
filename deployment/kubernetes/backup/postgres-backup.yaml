@@ -1,12 +1,17 @@
-# ENT-5: nightly PostgreSQL backup -> object storage.
-# TEMPLATE — not runnable without a cluster + object-storage credentials (deferred, ENT-5 §0.3).
-# Set BACKUP_BUCKET and provide S3/GCS creds via the referenced secret; move DB creds to a Secret
-# (they mirror the current plaintext deployment today — see FI-SEC/FI-ENT5).
+# ENT-5 / FI-ENT5-B (ADR-074): nightly PostgreSQL backup -> object storage.
+#
+# Runnable once `aiqaos-backup-secret` (see backup-secret.yaml) exists and the DB name/user/host below
+# match your deployment (databases/postgres.yaml). pg_dump runs in an initContainer writing to a shared
+# emptyDir; the main container uploads via aws-cli (works against MinIO via --endpoint-url and real AWS
+# S3 when S3_ENDPOINT is empty). No plaintext credentials — all from the Secret.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: postgres-backup
   namespace: ai-qa-os
+  labels:
+    app: aiqaos
+    component: backup
 spec:
   schedule: "0 2 * * *"            # daily 02:00
   concurrencyPolicy: Forbid
@@ -18,22 +23,48 @@ spec:
       template:
         spec:
           restartPolicy: OnFailure
-          containers:
-            - name: pg-backup
+          volumes:
+            - name: dump
+              emptyDir: {}
+          initContainers:
+            - name: pg-dump
               image: postgres:16-alpine
               command: ["/bin/sh", "-c"]
               args:
                 - >
-                  set -e;
+                  set -eu;
                   TS=$(date +%Y%m%d-%H%M%S);
-                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h postgres-service -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /tmp/pg-$TS.dump;
-                  echo "Upload /tmp/pg-$TS.dump to $BACKUP_BUCKET (aws s3 cp / mc cp) using the object-storage secret";
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f "/dump/pg-$TS.dump";
+                  echo "pg_dump complete: /dump/pg-$TS.dump"
               env:
+                - name: POSTGRES_HOST
+                  value: postgres-service           # match databases/postgres.yaml Service
                 - name: POSTGRES_DB
-                  value: ai_qa_os
+                  value: ai_qa_os_dashboard          # match the deployed DB name (ADR-053 reconciled)
                 - name: POSTGRES_USER
                   value: qaosuser
                 - name: POSTGRES_PASSWORD
-                  value: qaossecurepassword   # TODO: move to a Secret (matches current deployment)
-                - name: BACKUP_BUCKET
-                  value: s3://REPLACE-ME/postgres
+                  valueFrom:
+                    secretKeyRef:
+                      name: aiqaos-backup-secret
+                      key: POSTGRES_PASSWORD
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+          containers:
+            - name: upload
+              image: amazon/aws-cli:2.17.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - >
+                  set -eu;
+                  EP="";
+                  if [ -n "${S3_ENDPOINT:-}" ]; then EP="--endpoint-url $S3_ENDPOINT"; fi;
+                  aws $EP s3 cp /dump/ "$BACKUP_BUCKET/postgres/" --recursive --only-show-errors;
+                  echo "Uploaded Postgres dump(s) to $BACKUP_BUCKET/postgres/"
+              envFrom:
+                - secretRef:
+                    name: aiqaos-backup-secret       # AWS_ACCESS_KEY_ID/SECRET, S3_ENDPOINT, BACKUP_BUCKET
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump

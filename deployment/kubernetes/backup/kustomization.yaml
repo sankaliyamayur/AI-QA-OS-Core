@@ -1,0 +1,10 @@
+# ENT-5 / FI-ENT5-B (ADR-074): bundle the backup CronJobs.
+# The Secret is NOT included here — create aiqaos-backup-secret out-of-band (see backup-secret.yaml)
+# so real credentials never live in git. Apply:  kubectl apply -k deployment/kubernetes/backup
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ai-qa-os
+resources:
+  - postgres-backup.yaml
+  - artifacts-backup.yaml
+  - qdrant-backup.yaml

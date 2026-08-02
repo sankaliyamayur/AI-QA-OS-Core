@@ -1,14 +1,18 @@
-# ENT-5: nightly artifact-tree backup -> object storage, plus a note on retention.
-# TEMPLATE — not runnable without a cluster + object-storage credentials (deferred, ENT-5 §0.3).
-# Once the object-storage ArtifactStore is the primary store (aiqaos.artifacts.store=object), the
-# execution workers write artifacts to object storage directly and this sync is only needed for the
-# legacy local PVC. Age-based purge is handled in-app by ArtifactRetentionService (opt-in), or by a
-# bucket lifecycle rule (FI-ENT5-C).
+# ENT-5 / FI-ENT5-B (ADR-074): nightly artifact-tree backup -> object storage.
+#
+# NOTE ON SCOPE: with the object-storage ArtifactStore as primary (aiqaos.artifacts.store=object +
+# object.provider=s3) and upload enabled (FI-ENT5-A/ADR-071), execution workers already write
+# artifacts to object storage, so the durable copy exists without this job. This CronJob covers the
+# LEGACY local-PVC deployment (store=local) — it syncs the on-disk artifact tree to the backup bucket.
+# Age-based purge is handled in-app by ArtifactRetentionService (opt-in) or a bucket lifecycle rule.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: artifacts-backup
   namespace: ai-qa-os
+  labels:
+    app: aiqaos
+    component: backup
 spec:
   schedule: "0 3 * * *"            # daily 03:00
   concurrencyPolicy: Forbid
@@ -16,6 +20,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      backoffLimit: 2
       template:
         spec:
           restartPolicy: OnFailure
@@ -25,16 +30,19 @@ spec:
               command: ["/bin/sh", "-c"]
               args:
                 - >
-                  set -e;
-                  echo "Sync the artifact tree to object storage";
-                  aws s3 sync /playwright-output "$BACKUP_BUCKET" --only-show-errors;
-              env:
-                - name: BACKUP_BUCKET
-                  value: s3://REPLACE-ME/artifacts
+                  set -eu;
+                  EP="";
+                  if [ -n "${S3_ENDPOINT:-}" ]; then EP="--endpoint-url $S3_ENDPOINT"; fi;
+                  aws $EP s3 sync /playwright-output "$BACKUP_BUCKET/artifacts/" --only-show-errors;
+                  echo "Synced /playwright-output to $BACKUP_BUCKET/artifacts/"
+              envFrom:
+                - secretRef:
+                    name: aiqaos-backup-secret       # AWS_ACCESS_KEY_ID/SECRET, S3_ENDPOINT, BACKUP_BUCKET
               volumeMounts:
                 - name: artifacts
                   mountPath: /playwright-output
+                  readOnly: true
           volumes:
             - name: artifacts
               persistentVolumeClaim:
-                claimName: artifacts-pvc   # match the execution artifact volume
+                claimName: artifacts-pvc   # match the execution artifact volume (local-store deployments)

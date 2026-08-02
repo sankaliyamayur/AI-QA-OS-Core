@@ -1,11 +1,18 @@
-# ENT-5: nightly Qdrant (vector store) snapshot -> object storage.
-# TEMPLATE — not runnable without a cluster + object-storage credentials (deferred, ENT-5 §0.3).
-# Adjust the Qdrant service name/port and collection to match the deployed vector store.
+# ENT-5 / FI-ENT5-B (ADR-074): nightly Qdrant (vector store) snapshot -> object storage.
+#
+# Runnable once `aiqaos-backup-secret` exists and the Qdrant service host/port match your deployment
+# (databases/qdrant.yaml). An initContainer creates a full-storage snapshot via the Qdrant snapshot
+# API and downloads it to a shared emptyDir; the main container uploads it via aws-cli. The snapshot
+# name is parsed from the create response without jq (curl image) — adjust the sed if your Qdrant
+# version changes the response shape.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: qdrant-backup
   namespace: ai-qa-os
+  labels:
+    app: aiqaos
+    component: backup
 spec:
   schedule: "30 2 * * *"           # daily 02:30
   concurrencyPolicy: Forbid
@@ -17,16 +24,43 @@ spec:
       template:
         spec:
           restartPolicy: OnFailure
-          containers:
+          volumes:
+            - name: snap
+              emptyDir: {}
+          initContainers:
             - name: qdrant-snapshot
               image: curlimages/curl:8.8.0
               command: ["/bin/sh", "-c"]
               args:
                 - >
-                  set -e;
-                  echo "Trigger a Qdrant snapshot via its snapshot API";
-                  curl -sf -X POST "http://qdrant-service:6333/snapshots";
-                  echo "Then download the snapshot and upload it to $BACKUP_BUCKET using the object-storage secret";
+                  set -eu;
+                  QDRANT="${QDRANT_URL:-http://qdrant-service:6333}";
+                  echo "Creating Qdrant snapshot at $QDRANT/snapshots";
+                  NAME=$(curl -sf -X POST "$QDRANT/snapshots" | sed -n 's/.*"name":"\([^"]*\)".*/\1/p');
+                  if [ -z "$NAME" ]; then echo "ERROR: could not parse snapshot name"; exit 1; fi;
+                  echo "Snapshot: $NAME — downloading";
+                  curl -sf "$QDRANT/snapshots/$NAME" -o "/snap/$NAME";
+                  echo "Downloaded /snap/$NAME"
               env:
-                - name: BACKUP_BUCKET
-                  value: s3://REPLACE-ME/qdrant
+                - name: QDRANT_URL
+                  value: http://qdrant-service:6333   # match databases/qdrant.yaml Service
+              volumeMounts:
+                - name: snap
+                  mountPath: /snap
+          containers:
+            - name: upload
+              image: amazon/aws-cli:2.17.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - >
+                  set -eu;
+                  EP="";
+                  if [ -n "${S3_ENDPOINT:-}" ]; then EP="--endpoint-url $S3_ENDPOINT"; fi;
+                  aws $EP s3 cp /snap/ "$BACKUP_BUCKET/qdrant/" --recursive --only-show-errors;
+                  echo "Uploaded Qdrant snapshot(s) to $BACKUP_BUCKET/qdrant/"
+              envFrom:
+                - secretRef:
+                    name: aiqaos-backup-secret       # AWS_ACCESS_KEY_ID/SECRET, S3_ENDPOINT, BACKUP_BUCKET
+              volumeMounts:
+                - name: snap
+                  mountPath: /snap
