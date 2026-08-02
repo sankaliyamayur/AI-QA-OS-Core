@@ -20,6 +20,10 @@ public class CostTracker {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private SpendLedger spendLedger;
 
+    // AI-6: optional — records actual token usage into the in-memory token/context-budget ledger.
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TokenLedger tokenLedger;
+
     public CostTracker(LLMCostRepository costRepository, AgentTraceRepository agentTraceRepository) {
         this.costRepository = costRepository;
         this.agentTraceRepository = agentTraceRepository;
@@ -63,6 +67,13 @@ public class CostTracker {
         // ENT-3: feed the fast quota ledger with the actual cost (durable record is the row above).
         if (spendLedger != null) {
             spendLedger.record(cost, req.getCorrelationId(), req.getAgentType());
+        }
+
+        // AI-6: feed the token/context-budget ledger with the actual token usage (input + output).
+        if (tokenLedger != null) {
+            tokenLedger.record(
+                    resp.getUsage().getInputTokens() + resp.getUsage().getOutputTokens(),
+                    req.getCorrelationId(), req.getAgentType());
         }
     }
 

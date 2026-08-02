@@ -5,7 +5,9 @@ import com.aiqaos.provider.contract.LLMProvider;
 import com.aiqaos.provider.cost.BudgetVerdict;
 import com.aiqaos.provider.cost.CostBudgetEnforcer;
 import com.aiqaos.provider.cost.CostTracker;
+import com.aiqaos.provider.cost.TokenBudgetEnforcer;
 import com.aiqaos.provider.exception.BudgetExceededException;
+import com.aiqaos.provider.exception.TokenBudgetExceededException;
 import com.aiqaos.provider.model.LLMRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +32,10 @@ public class LLMProviderManager {
     // ENT-3: optional LLM cost-quota enforcement (disabled by default; null in direct-construction tests).
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private CostBudgetEnforcer costBudgetEnforcer;
+
+    // AI-6: optional LLM token/context-budget enforcement (disabled by default; null in direct-construction tests).
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TokenBudgetEnforcer tokenBudgetEnforcer;
 
     private final OpenAIProvider        openAIProvider;
     private final ClaudeProvider        claudeProvider;
@@ -113,6 +119,19 @@ public class LLMProviderManager {
                     throw new BudgetExceededException(message);
                 }
                 log.warn("[cost-quota] {} (warn mode — allowing)", message);
+            }
+        }
+
+        // AI-6: pre-flight token/context-budget (soft cap). No-op when disabled; mirrors the cost check.
+        if (tokenBudgetEnforcer != null) {
+            BudgetVerdict verdict = tokenBudgetEnforcer.check(request);
+            if (!verdict.isAllowed()) {
+                String message = "LLM token/context budget exceeded [" + verdict.getScope()
+                        + ": limit " + verdict.getLimit() + ", used " + verdict.getSpend() + "]";
+                if (tokenBudgetEnforcer.isEnforce()) {
+                    throw new TokenBudgetExceededException(message);
+                }
+                log.warn("[token-budget] {} (warn mode — allowing)", message);
             }
         }
 
