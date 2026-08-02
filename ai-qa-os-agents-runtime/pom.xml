@@ -45,5 +45,11 @@
             <artifactId>ai-qa-os-brain</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- AGT-2: JUnit/AssertJ for the collaboration-mediator unit tests (module had no test dep). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
