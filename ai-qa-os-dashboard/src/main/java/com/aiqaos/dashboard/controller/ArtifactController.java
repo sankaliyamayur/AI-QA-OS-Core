@@ -1,10 +1,12 @@
 package com.aiqaos.dashboard.controller;
 
 import com.aiqaos.dashboard.dto.ArtifactDTO;
+import com.aiqaos.execution.artifact.ArtifactSigner;
 import com.aiqaos.execution.artifact.ArtifactStore;
 import com.aiqaos.execution.artifact.ArtifactUploadRequest;
 import com.aiqaos.execution.artifact.ArtifactUploader;
 import jakarta.servlet.http.HttpServletRequest;
+import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -66,11 +68,16 @@ public class ArtifactController {
     /** FI-ENT5-C: the durable store (Local or Object); present as a bean, injected via provider. */
     private final ObjectProvider<ArtifactStore> artifactStoreProvider;
 
+    /** SEC-6 (ADR-076): verifies the durable artifact's signature sidecar on serve, when signing is on. */
+    private final ObjectProvider<ArtifactSigner> artifactSignerProvider;
+
     public ArtifactController(JdbcTemplate jdbc,
                               ObjectProvider<ArtifactStore> artifactStoreProvider,
+                              ObjectProvider<ArtifactSigner> artifactSignerProvider,
                               @Value("${aiqaos.artifacts.base-dir:./playwright-output}") String artifactsBaseDir) {
         this.jdbc = jdbc;
         this.artifactStoreProvider = artifactStoreProvider;
+        this.artifactSignerProvider = artifactSignerProvider;
         File file = new File(artifactsBaseDir);
         if (file.isAbsolute()) {
             this.resolvedBaseDir = file.getAbsolutePath();
@@ -259,7 +266,31 @@ public class ArtifactController {
             // SEC-4: a served artifact never needs to load app resources or run scripts.
             .header("X-Content-Type-Options", "nosniff")
             .header("Content-Security-Policy", "default-src 'none'; sandbox")
+            // SEC-6 (ADR-076): tamper-evidence — verify the bytes against the .sig sidecar when signing is on.
+            .header("X-Artifact-Integrity", integrity(store, key, bytes))
             .body(new ByteArrayResource(bytes));
+    }
+
+    /**
+     * SEC-6 (ADR-076): {@code verified} / {@code MISMATCH} / {@code unverified} (no sidecar) / {@code unsigned}
+     * (signing off). A mismatch is logged as a tamper signal; serving still returns the stored bytes
+     * (detection, not denial). Never verifies a {@code .sig} object against its own sidecar.
+     */
+    private String integrity(ArtifactStore store, String key, byte[] bytes) {
+        ArtifactSigner signer = artifactSignerProvider != null ? artifactSignerProvider.getIfAvailable() : null;
+        if (signer == null || !signer.isSigningEnabled() || key.endsWith(".sig")) {
+            return "unsigned";
+        }
+        try {
+            byte[] sig = store.resolve(key + ".sig");
+            boolean ok = signer.verify(bytes, new String(sig, StandardCharsets.UTF_8));
+            if (!ok) {
+                log.warn("[artifact-integrity] signature MISMATCH for {} (possible tampering)", key);
+            }
+            return ok ? "verified" : "MISMATCH";
+        } catch (Exception e) {
+            return "unverified"; // no sidecar / could not read
+        }
     }
 
     /** Content type for a durable key, from its trailing {@code /<type>} segment (FI-ENT5-A scheme). */

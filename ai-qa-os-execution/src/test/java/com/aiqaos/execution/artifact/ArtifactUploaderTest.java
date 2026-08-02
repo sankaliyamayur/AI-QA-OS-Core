@@ -31,7 +31,7 @@ class ArtifactUploaderTest {
         Path shot = Files.write(dir.resolve("shot.png"), "IMG".getBytes(StandardCharsets.UTF_8));
         Path vid = Files.write(dir.resolve("vid.webm"), "VID".getBytes(StandardCharsets.UTF_8));
         FakeArtifactStore store = new FakeArtifactStore();
-        ArtifactUploader uploader = new ArtifactUploader(store);
+        ArtifactUploader uploader = new ArtifactUploader(store, signer(false, ""));
 
         ArtifactUploadRequest req = new ArtifactUploadRequest(
                 EXEC, "TC-AL-003", "chromium", 2,
@@ -62,12 +62,36 @@ class ArtifactUploaderTest {
     @Test
     void storeFailureIsSwallowed_bestEffort(@TempDir Path dir) throws Exception {
         Path shot = Files.write(dir.resolve("shot.png"), "IMG".getBytes(StandardCharsets.UTF_8));
-        ArtifactUploader uploader = new ArtifactUploader(new ThrowingArtifactStore());
+        ArtifactUploader uploader = new ArtifactUploader(new ThrowingArtifactStore(), signer(false, ""));
 
         List<String> keys = uploader.upload(new ArtifactUploadRequest(
                 EXEC, "TC-1", "firefox", 1, shot.toString(), null, null, null, null));
 
         assertTrue(keys.isEmpty(), "a throwing store must not fail the upload — the key is simply not recorded");
+    }
+
+    @Test
+    void signingEnabled_writesVerifiableSignatureSidecar(@TempDir Path dir) throws Exception {
+        Path shot = Files.write(dir.resolve("shot.png"), "IMG".getBytes(StandardCharsets.UTF_8));
+        FakeArtifactStore store = new FakeArtifactStore();
+        ArtifactSigner signer = signer(true, "sec6-key");
+        ArtifactUploader uploader = new ArtifactUploader(store, signer);
+
+        uploader.upload(new ArtifactUploadRequest(
+                EXEC, "TC-AL-003", "chromium", 2, shot.toString(), null, null, null, null));
+
+        String artifactKey = "executions/" + EXEC + "/run-2/chromium/TC-AL-003/screenshot";
+        String sigKey = artifactKey + ".sig";
+        assertTrue(store.objects.containsKey(sigKey), "a .sig sidecar is written alongside the artifact");
+        String sig = new String(store.objects.get(sigKey), StandardCharsets.UTF_8);
+        assertTrue(signer.verify("IMG".getBytes(StandardCharsets.UTF_8), sig), "the sidecar verifies the stored bytes");
+    }
+
+    private static ArtifactSigner signer(boolean enabled, String secret) {
+        ArtifactSignatureProperties p = new ArtifactSignatureProperties();
+        p.setEnabled(enabled);
+        p.setSecret(secret);
+        return new ArtifactSigner(p);
     }
 
     // --- fakes -----------------------------------------------------------------------------------

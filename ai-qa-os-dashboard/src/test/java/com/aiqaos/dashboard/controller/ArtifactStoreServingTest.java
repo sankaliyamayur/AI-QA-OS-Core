@@ -3,6 +3,8 @@ package com.aiqaos.dashboard.controller;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.aiqaos.execution.artifact.ArtifactSignatureProperties;
+import com.aiqaos.execution.artifact.ArtifactSigner;
 import com.aiqaos.execution.artifact.ArtifactStore;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -27,7 +29,18 @@ class ArtifactStoreServingTest {
     private static final String KEY = "executions/abc/run-2/chromium/TC-AL-003/screenshot";
 
     private ArtifactController controller(ArtifactStore store) {
-        return new ArtifactController(null, provider(store), "./playwright-output");
+        return controller(store, signer(false, ""));
+    }
+
+    private ArtifactController controller(ArtifactStore store, ArtifactSigner signer) {
+        return new ArtifactController(null, objectProvider(store), objectProvider(signer), "./playwright-output");
+    }
+
+    private static ArtifactSigner signer(boolean enabled, String secret) {
+        ArtifactSignatureProperties p = new ArtifactSignatureProperties();
+        p.setEnabled(enabled);
+        p.setSecret(secret);
+        return new ArtifactSigner(p);
     }
 
     private static MockHttpServletRequest get(String uri) {
@@ -65,9 +78,37 @@ class ArtifactStoreServingTest {
 
     @Test
     void noStore_is404() {
-        ResponseEntity<Resource> res = new ArtifactController(null, provider(null), "./playwright-output")
+        ResponseEntity<Resource> res = new ArtifactController(
+                null, objectProvider((ArtifactStore) null), objectProvider(signer(false, "")), "./playwright-output")
                 .serveFromStore(get("/api/artifacts/store/" + KEY));
         assertEquals(HttpStatus.NOT_FOUND, res.getStatusCode());
+    }
+
+    @Test
+    void servedArtifact_integrityHeader_verifiedAndMismatch() {
+        ArtifactSigner signer = signer(true, "sec6-key");
+        FakeArtifactStore store = new FakeArtifactStore();
+        byte[] bytes = "IMG".getBytes(StandardCharsets.UTF_8);
+        store.store(KEY, bytes);
+
+        // valid sidecar -> verified
+        store.store(KEY + ".sig", signer.sign(bytes).getBytes(StandardCharsets.UTF_8));
+        ResponseEntity<Resource> ok = controller(store, signer).serveFromStore(get("/api/artifacts/store/" + KEY));
+        assertEquals("verified", ok.getHeaders().getFirst("X-Artifact-Integrity"));
+
+        // tampered sidecar -> MISMATCH (still served — detection, not denial)
+        store.store(KEY + ".sig", signer.sign("OTHER".getBytes(StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8));
+        ResponseEntity<Resource> bad = controller(store, signer).serveFromStore(get("/api/artifacts/store/" + KEY));
+        assertEquals(HttpStatus.OK, bad.getStatusCode());
+        assertEquals("MISMATCH", bad.getHeaders().getFirst("X-Artifact-Integrity"));
+    }
+
+    @Test
+    void servedArtifact_unsignedHeader_whenSigningOff() {
+        FakeArtifactStore store = new FakeArtifactStore();
+        store.store(KEY, "IMG".getBytes(StandardCharsets.UTF_8));
+        ResponseEntity<Resource> res = controller(store).serveFromStore(get("/api/artifacts/store/" + KEY));
+        assertEquals("unsigned", res.getHeaders().getFirst("X-Artifact-Integrity"));
     }
 
     @Test
@@ -82,12 +123,12 @@ class ArtifactStoreServingTest {
 
     // --- fakes -----------------------------------------------------------------------------------
 
-    private static ObjectProvider<ArtifactStore> provider(ArtifactStore store) {
+    private static <T> ObjectProvider<T> objectProvider(T instance) {
         return new ObjectProvider<>() {
-            @Override public ArtifactStore getObject() { return store; }
-            @Override public ArtifactStore getObject(Object... args) { return store; }
-            @Override public ArtifactStore getIfAvailable() { return store; }
-            @Override public ArtifactStore getIfUnique() { return store; }
+            @Override public T getObject() { return instance; }
+            @Override public T getObject(Object... args) { return instance; }
+            @Override public T getIfAvailable() { return instance; }
+            @Override public T getIfUnique() { return instance; }
         };
     }
 

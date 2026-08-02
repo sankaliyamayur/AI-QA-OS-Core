@@ -1,5 +1,6 @@
 package com.aiqaos.execution.artifact;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,9 +28,11 @@ public class ArtifactUploader {
     private static final Logger log = LoggerFactory.getLogger(ArtifactUploader.class);
 
     private final ArtifactStore artifactStore;
+    private final ArtifactSigner artifactSigner;
 
-    public ArtifactUploader(ArtifactStore artifactStore) {
+    public ArtifactUploader(ArtifactStore artifactStore, ArtifactSigner artifactSigner) {
         this.artifactStore = artifactStore;
+        this.artifactSigner = artifactSigner;
     }
 
     /** Uploads every non-null, existing file in the request; returns the keys actually stored. */
@@ -60,6 +63,10 @@ public class ArtifactUploader {
             String key = keyFor(req, type);
             artifactStore.store(key, bytes);
             storedKeys.add(key);
+            // SEC-6 (ADR-076): store an HMAC signature sidecar for tamper-evidence, when signing is on.
+            if (artifactSigner != null && artifactSigner.isSigningEnabled()) {
+                artifactStore.store(key + ".sig", artifactSigner.sign(bytes).getBytes(StandardCharsets.UTF_8));
+            }
         } catch (Exception ex) {
             // Best-effort: never let artifact upload break an execution.
             log.warn("FI-ENT5-A: could not upload {} artifact {}: {}", type, path, ex.getMessage());
