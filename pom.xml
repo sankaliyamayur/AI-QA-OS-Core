@@ -31,7 +31,6 @@
         <module>ai-qa-os-security</module>
         <module>ai-qa-os-observability</module>
         <module>ai-qa-os-integration</module>
-        <module>ai-qa-os-data</module>
         <module>ai-qa-os-dashboard</module>
         <module>ai-qa-os-agents-runtime</module>
         <module>ai-qa-os-ai-provider</module>
