@@ -58,6 +58,10 @@ public class WorkflowClientImpl implements WorkflowClient {
             } catch (IllegalArgumentException e) {
                 metadata.setCorrelationId(UUID.randomUUID());
             }
+        } else {
+            // The start API accepts requests without a correlationId; default one so the
+            // downstream metadata (and the response's correlationId.toString()) never NPEs.
+            metadata.setCorrelationId(UUID.randomUUID());
         }
 
         // 2. Build context

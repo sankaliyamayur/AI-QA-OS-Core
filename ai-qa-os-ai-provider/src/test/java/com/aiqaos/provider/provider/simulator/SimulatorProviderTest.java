@@ -69,4 +69,41 @@ public class SimulatorProviderTest {
         assertNotNull(resp);
         assertTrue(resp.getText().contains("testCases"));
     }
+
+    @Test
+    @DisplayName("DX-3 regression (live E2E): each pipeline purpose routes to schema-valid JSON, even when the "
+            + "prompt mentions Playwright — previously TEST_CASE/SCRIPT matched keyword branches and returned non-JSON")
+    void testPurposeRoutingReturnsSchemaValidJsonPerStep() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        // The real test-case prompt for US-001 mentions Playwright/Selenium/automation, which used to
+        // match the "script" branch and return a //-commented script the step could not parse as JSON.
+        String tc = provider.generate(new LLMRequest(
+                "Generate test cases. Suitable for Playwright, Selenium, automation.",
+                "local-simulator", "TEST_CASE_GENERATION")).getText();
+        assertTrue(mapper.readTree(tc).has("testCases"), "TEST_CASE_GENERATION must be JSON with testCases");
+
+        // SCRIPT_GENERATION must be JSON with a non-empty scripts[] (the ScriptGenerator schema), not raw JS.
+        String script = provider.generate(new LLMRequest(
+                "Produce the automation for the login requirement story",
+                "local-simulator", "SCRIPT_GENERATION")).getText();
+        assertFalse(script.trim().startsWith("//"), "SCRIPT_GENERATION must not be a //-commented raw script");
+        assertTrue(mapper.readTree(script).get("scripts").size() > 0, "SCRIPT_GENERATION must have scripts[]");
+
+        // BUG_ANALYSIS requires a non-empty rootCause.
+        String bug = provider.generate(new LLMRequest("analyze the failure", "local-simulator", "BUG_ANALYSIS")).getText();
+        assertFalse(mapper.readTree(bug).get("rootCause").asText().isBlank(), "BUG_ANALYSIS needs rootCause");
+
+        // REPORT_GENERATION requires reportId or summary.
+        String report = provider.generate(new LLMRequest("summarize the run", "local-simulator", "REPORT_GENERATION")).getText();
+        assertTrue(mapper.readTree(report).has("summary"), "REPORT_GENERATION needs summary");
+
+        // SELF_HEALING requires a non-empty healingAction (NOT the legacy \"healed\" field).
+        String heal = provider.generate(new LLMRequest("decide healing", "local-simulator", "SELF_HEALING")).getText();
+        assertFalse(mapper.readTree(heal).get("healingAction").asText().isBlank(), "SELF_HEALING needs healingAction");
+
+        // LEARNING_ENGINE just needs a JSON object.
+        String learn = provider.generate(new LLMRequest("learn", "local-simulator", "LEARNING_ENGINE")).getText();
+        assertTrue(mapper.readTree(learn).isObject(), "LEARNING_ENGINE must be a JSON object");
+    }
 }
