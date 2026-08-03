@@ -116,6 +116,12 @@
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
+                        <!-- Retain method parameter names in bytecode so Spring MVC can bind
+                             @PathVariable/@RequestParam by inferred name. Without this the project
+                             (which has no spring-boot-starter-parent to supply it) compiles without
+                             -parameters, and every path-variable endpoint 500s with
+                             "Name for argument of type [...] not specified". -->
+                        <parameters>true</parameters>
                     </configuration>
                 </plugin>
                 <!-- Maven Surefire Plugin (for tests) -->
