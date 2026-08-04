@@ -42,6 +42,15 @@ public class AutonomousQAPipelineOrchestrator {
     private final PausedWorkflowRegistry pausedWorkflowRegistry;
     private final HumanReviewService humanReviewService;
 
+    private static final org.slf4j.Logger LIFECYCLE_LOG =
+            org.slf4j.LoggerFactory.getLogger(AutonomousQAPipelineOrchestrator.class);
+
+    // SCALE-2 (FI-SCALE2-A): publish workflow-lifecycle events onto the core EventBus seam so real events
+    // flow over the distributed binding (Kafka) when enabled — closing the "wired transport, no producer"
+    // gap. Field-injected/optional: null in direct-construction tests, so publishing is simply skipped.
+    @Autowired(required = false)
+    private com.aiqaos.core.event.EventBus eventBus;
+
     // OBS-1: optional tracing (field-injected so direct construction in tests leaves them null → no spans).
     @Autowired(required = false)
     private TraceManager traceManager;
@@ -107,6 +116,9 @@ public class AutonomousQAPipelineOrchestrator {
                 ? context.getMetadata().getCorrelationId().toString()
                 : null;
 
+        // SCALE-2: emit the workflow-started event on the seam (flows over Kafka when transport=kafka).
+        publishLifecycle("STARTED", workflowId, executionId, correlationId);
+
         // OBS-1: a run span for the whole workflow (no-op when tracing beans are absent, e.g. tests).
         Span runSpan = traceManager != null ? traceManager.startSpan("workflow.run") : null;
         Scope scope = runSpan != null ? runSpan.makeCurrent() : null;
@@ -122,7 +134,12 @@ public class AutonomousQAPipelineOrchestrator {
             if (runSpan != null && workflowId != null) {
                 runSpan.setAttribute("workflow.id", workflowId.toString());
             }
-            return executeFrom(request, context, 0, executionId, workflowId, correlationId, new int[]{0, 0, 0});
+            WorkflowResponse response =
+                    executeFrom(request, context, 0, executionId, workflowId, correlationId, new int[]{0, 0, 0});
+            // SCALE-2: emit the terminal lifecycle event (COMPLETED unless a step failed the run).
+            publishLifecycle("FAILED".equals(response.getStatus()) ? "FAILED" : "COMPLETED",
+                    workflowId, executionId, correlationId);
+            return response;
         } finally {
             if (scope != null) {
                 scope.close();
@@ -135,6 +152,35 @@ public class AutonomousQAPipelineOrchestrator {
             } else {
                 org.slf4j.MDC.remove("correlationId");
             }
+        }
+    }
+
+    // SCALE-2 (FI-SCALE2-A): best-effort publish of a workflow-lifecycle SystemEvent onto the EventBus
+    // seam (→ Kafka when transport=kafka). No-op when the bus is absent (direct-construction tests);
+    // a publish failure is logged, never propagated — event emission must not break the pipeline.
+    private void publishLifecycle(String phase, UUID workflowId, UUID executionId, String correlationId) {
+        if (eventBus == null) {
+            return;
+        }
+        try {
+            com.aiqaos.core.event.SystemEvent event = new com.aiqaos.core.event.SystemEvent();
+            event.setComponentName("AutonomousQAPipeline");
+            event.setSystemMessage("workflow " + phase + (workflowId != null ? " id=" + workflowId : ""));
+            com.aiqaos.core.contract.BaseMetadata metadata = event.getMetadata();
+            if (metadata != null) {
+                metadata.setWorkflowId(workflowId);
+                metadata.setExecutionId(executionId);
+                if (correlationId != null) {
+                    try {
+                        metadata.setCorrelationId(UUID.fromString(correlationId));
+                    } catch (IllegalArgumentException ignored) {
+                        // non-UUID correlationId — leave it unset rather than fail the publish
+                    }
+                }
+            }
+            eventBus.publish(event);
+        } catch (Exception e) {
+            LIFECYCLE_LOG.warn("SCALE-2: failed to publish {} lifecycle event: {}", phase, e.toString());
         }
     }
 

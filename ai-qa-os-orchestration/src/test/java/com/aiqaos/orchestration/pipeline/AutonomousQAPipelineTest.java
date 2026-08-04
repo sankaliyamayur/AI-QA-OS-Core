@@ -616,6 +616,42 @@ public class AutonomousQAPipelineTest {
         assertEquals(2, reader.getCallCount());
     }
 
+    @Test
+    public void testPipelinePublishesLifecycleEventsOnEventBus() {
+        // SCALE-2 (FI-SCALE2-A): when an EventBus is wired, runPipeline emits a STARTED then a terminal
+        // (COMPLETED/FAILED) SystemEvent onto the core seam — the producer that drives the Kafka binding.
+        java.util.List<com.aiqaos.core.event.SystemEvent> published = new java.util.ArrayList<>();
+        com.aiqaos.core.event.EventBus capturingBus = new com.aiqaos.core.event.EventBus() {
+            @Override public void publish(com.aiqaos.core.event.BaseEvent event) {
+                if (event instanceof com.aiqaos.core.event.SystemEvent se) {
+                    published.add(se);
+                }
+            }
+            @Override public <T extends com.aiqaos.core.event.BaseEvent> void subscribe(
+                    Class<T> type, java.util.function.Consumer<T> handler) { }
+        };
+        ReflectionTestUtils.setField(orchestrator, "eventBus", capturingBus);
+
+        WorkflowRequest request = new WorkflowRequest();
+        WorkflowContext context = new WorkflowContext();
+        context.setQaWorkflowState(new AutonomousQAWorkflowState());
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("storyPath", "US-001.md");
+        request.setInputs(inputs);
+
+        orchestrator.runPipeline(request, context);
+
+        assertEquals(2, published.size(), "expected a STARTED and a terminal lifecycle event");
+        assertEquals("AutonomousQAPipeline", published.get(0).getComponentName());
+        assertTrue(published.get(0).getSystemMessage().contains("STARTED"),
+                "first event should be STARTED");
+        assertTrue(published.get(1).getSystemMessage().contains("COMPLETED")
+                        || published.get(1).getSystemMessage().contains("FAILED"),
+                "second event should be a terminal COMPLETED/FAILED");
+        assertNotNull(published.get(0).getMetadata().getWorkflowId(),
+                "lifecycle event should carry the workflowId for correlation");
+    }
+
     private static class StubRequirementReader extends RequirementReader {
         private final String returnValue;
         private IOException exceptionToThrow;
