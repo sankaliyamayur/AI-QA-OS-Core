@@ -116,6 +116,19 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <!-- ENT-5 (ADR-068): opt in to the durable S3/MinIO artifact object store. The gateway runs the
+             ExecutionStep that uploads produced artifacts; execution declares these as optional (non-
+             transitive), so the app must opt in for S3Client to be present. S3ObjectStorageClient +
+             S3StorageConfiguration then activate on aiqaos.artifacts.store=object & object.provider=s3;
+             default (local / in-memory) is unchanged. Versions from the awssdk BOM. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
