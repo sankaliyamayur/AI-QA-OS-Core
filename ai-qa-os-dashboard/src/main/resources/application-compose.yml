@@ -19,3 +19,18 @@ aiqaos:
   security:
     # Frictionless local dev by default; set AIQAOS_SECURITY_ENABLED=true to exercise SEC-1 auth.
     enabled: ${AIQAOS_SECURITY_ENABLED:false}
+  artifacts:
+    # ENT-5 (ADR-068): the dashboard SERVES durable artifacts via ArtifactController#serveFromStore
+    # (/api/artifacts/store/**), so it needs the same object-store config as the gateway that uploads
+    # them. Default stays local; set AIQAOS_ARTIFACTS_STORE=object + OBJECT_PROVIDER=s3 with MinIO up.
+    store: ${AIQAOS_ARTIFACTS_STORE:local}
+    object:
+      provider: ${AIQAOS_ARTIFACTS_OBJECT_PROVIDER:in-memory}
+      s3:
+        # SEC-2: creds from env/.env (MinIO dev defaults), never committed. MinIO needs path-style.
+        bucket: ${AIQAOS_ARTIFACTS_S3_BUCKET:aiqaos-artifacts}
+        endpoint: ${AIQAOS_ARTIFACTS_S3_ENDPOINT:http://localhost:9000}
+        region: ${AIQAOS_ARTIFACTS_S3_REGION:us-east-1}
+        access-key: ${AIQAOS_ARTIFACTS_S3_ACCESS_KEY:${MINIO_ROOT_USER:minioadmin}}
+        secret-key: ${AIQAOS_ARTIFACTS_S3_SECRET_KEY:${MINIO_ROOT_PASSWORD:minioadmin}}
+        path-style-access: true
