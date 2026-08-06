@@ -87,6 +87,17 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- ENT-5 (ADR-068): opt into the S3/MinIO object store so ArtifactController#serveFromStore
+             (/api/artifacts/store/**) can resolve durable artifacts. Execution declares the AWS SDK
+             <optional> (non-transitive); the serving app must opt in. Versions from the awssdk BOM. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
