@@ -1,0 +1,1 @@
+import { test, expect } from '@playwright/test'; test('valid login navigation', async ({ page }) => { await page.goto('http://localhost:3000'); await page.fill('#username', 'admin'); await page.fill('#password', 'secret'); await page.click('button[type=submit]'); await expect(page.locator('.dashboard')).toBeVisible(); });

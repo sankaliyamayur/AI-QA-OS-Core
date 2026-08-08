@@ -1,0 +1,48 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "title": "AI-QA-OS Agent Performance",
+  "uid": "aiqaos-agents",
+  "tags": ["ai-qa-os", "agents", "performance"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Per-Agent Execution Duration (Avg)",
+      "type": "barplot",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(aiqaos_agent_duration_seconds_sum[5m])) by (agent) / sum(rate(aiqaos_agent_duration_seconds_count[5m])) by (agent)", "legendFormat": "{{agent}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Agent Confidence Scores",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "avg(aiqaos_agent_confidence_score) by (agent)", "legendFormat": "{{agent}} confidence" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Flaky Test Detection Rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(aiqaos_flaky_tests_detected_total)", "legendFormat": "Flaky Tests" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Step Retry Count by Agent",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(aiqaos_step_retries_total[5m])) by (agent)", "legendFormat": "{{agent}} retries" }
+      ]
+    }
+  ]
+}
