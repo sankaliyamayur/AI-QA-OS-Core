@@ -87,6 +87,20 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- FI-PE3-C: read prompt_executions for the per-execution prompt history read-model. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-intelligence</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- FI-PE3-D: push prompt-regression alerts through ENT-2's governed notification path. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-notification</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- ENT-5 (ADR-068): opt into the S3/MinIO object store so ArtifactController#serveFromStore
              (/api/artifacts/store/**) can resolve durable artifacts. Execution declares the AWS SDK
              <optional> (non-transitive); the serving app must opt in. Versions from the awssdk BOM. -->
