@@ -16,8 +16,14 @@ aiqaos:
 spring:
   ssl:
     bundle:
+      watch:
+        file:
+          quiet-period: ${AIQAOS_MTLS_WATCH_QUIET_PERIOD:10s}
       jks:
         gateway-client:
+          # ADR-093: watch the mounted client keystore. On its own this only refreshes the bundle —
+          # the HTTP client must also rebuild, see GatewayClientConfig's update handler.
+          reload-on-update: true
           key:
             alias: dashboard
           keystore:

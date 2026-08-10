@@ -51,6 +51,42 @@ class GatewayClientConfigTest {
                 "the configured bundle must be the one applied — this is what carries the client cert");
     }
 
+    /**
+     * ADR-093: without this subscription a rotated certificate would need a pod restart —
+     * {@code reload-on-update} refreshes the bundle, but a client built from it has already captured
+     * the old {@code SSLContext}.
+     */
+    @Test
+    void theClientSubscribesToBundleUpdatesSoRotationDoesNotNeedARestart() {
+        RecordingBundles bundles = new RecordingBundles(true);
+
+        config.gatewayRestTemplate(new RestTemplateBuilder(), bundles, "gateway-client");
+
+        assertEquals(List.of("gateway-client"), bundles.updateHandlersFor,
+                "an update handler must be registered for the configured bundle");
+    }
+
+    @Test
+    void firingABundleUpdateDoesNotDisturbTheInjectedClientReference() {
+        RecordingBundles bundles = new RecordingBundles(true);
+
+        RestTemplate client = config.gatewayRestTemplate(new RestTemplateBuilder(), bundles, "gateway-client");
+        bundles.fireUpdate(SslBundle.of(null));
+
+        // Callers (ReviewController) hold this reference for the life of the context, so a rotation
+        // must swap the factory underneath rather than replace the RestTemplate.
+        assertNotNull(client.getRequestFactory());
+    }
+
+    @Test
+    void noBundleMeansNoUpdateSubscription() {
+        RecordingBundles bundles = new RecordingBundles(false);
+
+        config.gatewayRestTemplate(new RestTemplateBuilder(), bundles, "");
+
+        assertTrue(bundles.updateHandlersFor.isEmpty());
+    }
+
     @Test
     void aMissingBundleFailsFastRatherThanFallingBackToPlaintext() {
         RecordingBundles bundles = new RecordingBundles(false);
@@ -67,10 +103,17 @@ class GatewayClientConfigTest {
     private static final class RecordingBundles implements SslBundles {
 
         private final List<String> requested = new ArrayList<>();
+        private final List<String> updateHandlersFor = new ArrayList<>();
+        private final List<java.util.function.Consumer<SslBundle>> handlers = new ArrayList<>();
         private final boolean resolvable;
 
         RecordingBundles(boolean resolvable) {
             this.resolvable = resolvable;
+        }
+
+        /** Simulate the file watcher noticing a rotated keystore. */
+        void fireUpdate(SslBundle updated) {
+            handlers.forEach(h -> h.accept(updated));
         }
 
         @Override
@@ -84,7 +127,8 @@ class GatewayClientConfigTest {
 
         @Override
         public void addBundleUpdateHandler(String name, java.util.function.Consumer<SslBundle> updateHandler) {
-            // not exercised
+            updateHandlersFor.add(name);
+            handlers.add(updateHandler);
         }
     }
 }

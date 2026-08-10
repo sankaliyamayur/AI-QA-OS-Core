@@ -1,9 +1,13 @@
 package com.aiqaos.dashboard.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.ssl.NoSuchSslBundleException;
+import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
+import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +36,8 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class GatewayClientConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(GatewayClientConfig.class);
+
     @Bean
     @ConditionalOnMissingBean(name = "gatewayRestTemplate")
     public RestTemplate gatewayRestTemplate(RestTemplateBuilder builder, SslBundles sslBundles,
@@ -40,7 +46,18 @@ public class GatewayClientConfig {
             return builder.build();
         }
         try {
-            return builder.setSslBundle(sslBundles.getBundle(bundleName)).build();
+            // ADR-093: route through a factory that can swap its TLS material, then subscribe to the
+            // bundle. `reload-on-update` refreshes the bundle when the mounted keystore changes, but
+            // a client built with setSslBundle(...) would have already baked in the old SSLContext —
+            // so without this handler a rotated certificate needs a pod restart.
+            SslBundle bundle = sslBundles.getBundle(bundleName);
+            ReloadableSslRequestFactory factory =
+                    new ReloadableSslRequestFactory(bundle, ClientHttpRequestFactorySettings.DEFAULTS);
+            sslBundles.addBundleUpdateHandler(bundleName, updated -> {
+                log.info("[mtls] SSL bundle '{}' updated — rebuilding the gateway client", bundleName);
+                factory.reload(updated);
+            });
+            return builder.requestFactory(() -> factory).build();
         } catch (NoSuchSslBundleException e) {
             throw new IllegalStateException(
                     "aiqaos.gateway.ssl-bundle=" + bundleName + " is configured but no such SSL bundle "

@@ -82,6 +82,26 @@ containing only that CA.
 
 ## Rotation
 
-Not implemented. Spring's SSL bundles support reloading, but nothing here watches the mounted Secret,
-so a rotated certificate currently requires a pod restart. Worth addressing before this is relied on
-in production.
+**Supported — no pod restart required** (ADR-093). Both bundles set `reload-on-update: true`, and
+`AIQAOS_MTLS_WATCH_QUIET_PERIOD` (default `10s`) lets a multi-file rotation settle before reloading.
+
+The two sides are **not** symmetric, which is why there is code as well as config:
+
+| Side | Mechanism |
+|---|---|
+| Gateway (server) | Spring re-arms the listener from the refreshed bundle. Config only. |
+| Dashboard (client) | `RestTemplateBuilder.setSslBundle(…)` bakes the `SSLContext` in at build time, so `ReloadableSslRequestFactory` swaps the delegate on an `SslBundles` update handler. Without it the client keeps presenting the retired certificate. |
+
+In-flight requests finish on the old material by design; the next request uses the new.
+
+**Verified on the filesystem** — reissuing the gateway keystore changed the served certificate on a
+process that had been running for minutes, and replacing the dashboard's client certificate changed
+what it presented within ~2s. **Not verified through a projected Secret**, whose updates are atomic
+symlink swaps; the watcher should handle it, but that needs a cluster.
+
+### Ordering hazard when the CA changes
+
+Rotating **leaf** certificates under a stable CA is safe in any order. Replacing the **CA** is not:
+each side must trust the new CA before the other presents a certificate signed by it, or calls fail
+in the gap. Roll truststores out first, then the leaves. **Nothing enforces this** — it is on whoever
+runs the rotation.

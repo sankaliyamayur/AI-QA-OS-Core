@@ -21,8 +21,18 @@ server:
 spring:
   ssl:
     bundle:
+      # ADR-093: how long the file watcher waits for writes to settle before reloading. A cert
+      # rotation is several files landing over a short window (keystore, then truststore); reloading
+      # mid-write would pick up a half-written store.
+      watch:
+        file:
+          quiet-period: ${AIQAOS_MTLS_WATCH_QUIET_PERIOD:10s}
       jks:
         gateway-server:
+          # ADR-093: reload the listener's certificate when the mounted keystore changes, so a
+          # rotation does not need a pod restart. Requires filesystem locations (below) — classpath
+          # or inline content is not watchable.
+          reload-on-update: true
           key:
             alias: gateway
           keystore:
