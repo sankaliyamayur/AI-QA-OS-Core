@@ -31,7 +31,11 @@ public class ReviewController {
 
     private final HumanReviewService humanReviewService;
     private final String gatewayBaseUrl;
-    private final RestTemplate restTemplate = new RestTemplate();
+
+    // SEC-6 (FI-SEC6-B): injected rather than `new RestTemplate()` so the call can carry a client
+    // certificate. A locally-constructed RestTemplate is unreachable by Spring's SSL bundles, so
+    // mTLS was impossible to configure until this became a bean. See GatewayClientConfig.
+    private final RestTemplate restTemplate;
 
     // OBS-1: optional — injects the current trace context onto the gateway call so the approve/reject
     // hop stays inside one trace across the two JVMs.
@@ -39,8 +43,10 @@ public class ReviewController {
     private TraceContextPropagator traceContextPropagator;
 
     public ReviewController(HumanReviewService humanReviewService,
+                            RestTemplate gatewayRestTemplate,
                             @Value("${aiqaos.gateway.base-url:http://localhost:8082}") String gatewayBaseUrl) {
         this.humanReviewService = humanReviewService;
+        this.restTemplate = gatewayRestTemplate;
         this.gatewayBaseUrl = gatewayBaseUrl;
     }
 

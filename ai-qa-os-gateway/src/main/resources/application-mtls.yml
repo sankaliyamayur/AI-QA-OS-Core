@@ -1,0 +1,36 @@
+# SEC-6 / FI-SEC6-B: mutual TLS on the gateway's server port.
+#
+# Kept in its own profile rather than behind a flag in application.yml on purpose: an SSL bundle whose
+# keystore is missing fails at startup, so a disabled-but-declared bundle would be a loaded gun for
+# every developer who never generates certs. Nothing here exists unless the profile is active.
+#
+#   SPRING_PROFILES_ACTIVE=compose,mtls AIQAOS_MTLS_DIR=<dir> AIQAOS_MTLS_PASSWORD=<pw> ...
+#
+# Local material: deployment/local/generate-mtls-certs.ps1 (gitignored output).
+# Cluster material: the aiqaos-mtls-secret Secret (deployment/kubernetes/mtls/) — never committed (SEC-2).
+server:
+  # A distinct port so an mTLS gateway is unmistakable in logs and never silently replaces the
+  # plaintext one during a rollout.
+  port: ${AIQAOS_MTLS_PORT:8443}
+  ssl:
+    enabled: true
+    bundle: gateway-server
+    # NEED, not WANT: WANT accepts a client that presents nothing, which is TLS wearing mTLS's name.
+    client-auth: need
+
+spring:
+  ssl:
+    bundle:
+      jks:
+        gateway-server:
+          key:
+            alias: gateway
+          keystore:
+            location: file:${AIQAOS_MTLS_DIR}/gateway-keystore.p12
+            password: ${AIQAOS_MTLS_PASSWORD:changeit}
+            type: PKCS12
+          truststore:
+            # Who the gateway will accept client certificates from — the local CA only.
+            location: file:${AIQAOS_MTLS_DIR}/gateway-truststore.p12
+            password: ${AIQAOS_MTLS_PASSWORD:changeit}
+            type: PKCS12

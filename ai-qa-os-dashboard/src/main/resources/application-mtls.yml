@@ -1,0 +1,32 @@
+# SEC-6 / FI-SEC6-B: present a client certificate on the dashboard -> gateway call.
+#
+# The dashboard is the only service in the platform that calls another one over HTTP
+# (ReviewController's AI-2 approve/reject proxy), so this is the single client half of platform mTLS.
+# See the gateway's application-mtls.yml for why this lives in a profile rather than behind a flag.
+#
+#   SPRING_PROFILES_ACTIVE=compose,mtls AIQAOS_MTLS_DIR=<dir> AIQAOS_MTLS_PASSWORD=<pw> ...
+aiqaos:
+  gateway:
+    # The gateway's mTLS listener. Must be https and must match the server certificate's SAN.
+    base-url: ${AIQAOS_GATEWAY_BASE_URL:https://localhost:8443}
+    # Naming a bundle here is what switches ReviewController's client onto a certificate-bearing
+    # RestTemplate; unset (the default) keeps the plaintext client, so this is non-breaking.
+    ssl-bundle: gateway-client
+
+spring:
+  ssl:
+    bundle:
+      jks:
+        gateway-client:
+          key:
+            alias: dashboard
+          keystore:
+            location: file:${AIQAOS_MTLS_DIR}/dashboard-keystore.p12
+            password: ${AIQAOS_MTLS_PASSWORD:changeit}
+            type: PKCS12
+          truststore:
+            # Who the dashboard will accept as the gateway — the local CA only, so a substituted
+            # server certificate is rejected rather than trusted.
+            location: file:${AIQAOS_MTLS_DIR}/dashboard-truststore.p12
+            password: ${AIQAOS_MTLS_PASSWORD:changeit}
+            type: PKCS12
