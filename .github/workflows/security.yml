@@ -19,6 +19,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    # SEC-5 fix: populate ~/.m2 before scanning. Trivy's Java analyzer resolves parent/BOM poms to
+    # determine dependency versions, and against a cold cache it fetched them from Maven Central and
+    # hit `429 Too Many Requests ... Retry-After: 1800`, which is FATAL — so it produced no SARIF and
+    # the upload below failed on the missing file. `exit-code: 0` only suppresses the exit code for
+    # FINDINGS; it does not survive a fatal scan error. Trivy's own log prescribes this remedy.
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+    # Resolve into the local repository so the analyzer reads poms from disk instead of the network.
+    # Best-effort: if this cannot complete, the scan below still runs (just against a colder cache),
+    # and a resolution hiccup must not masquerade as a security failure.
+    - name: Warm the Maven cache for the analyzer
+      continue-on-error: true
+      run: mvn -B -q dependency:go-offline -DskipTests
     # SEC-5: scan Maven (pom.xml) + npm (package-lock.json) manifests for known CVEs.
     # Report-only (exit-code 0) — findings surface in the Security tab, do not block (visibility-first).
     # ORG-1: vendored node_modules removed, so the scan reads the package-lock.json manifest directly.
@@ -32,8 +49,12 @@ jobs:
         severity: CRITICAL,HIGH
         ignore-unfixed: true
         exit-code: '0'
+    # Only upload when the scan actually produced a report. Without this guard a fatal Trivy error
+    # turns one red check into two, and the second one ("Path does not exist") hides the first.
+    # Deliberately NOT continue-on-error on the scan itself: a dependency scan that silently does not
+    # run is worse than a red check, so a genuine scan failure still surfaces.
     - name: Upload Trivy results to Security tab
-      if: always()
+      if: always() && hashFiles('trivy-fs.sarif') != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: trivy-fs.sarif
