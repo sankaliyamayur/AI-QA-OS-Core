@@ -134,6 +134,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- ADR-089: in-memory DB so GatewayApplicationContextSmokeTest can start the real context
+             without a Postgres. Schema comes from ddl-auto in that test, not Flyway. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
