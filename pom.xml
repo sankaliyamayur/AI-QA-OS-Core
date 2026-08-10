@@ -48,7 +48,7 @@
         <lombok.version>1.18.34</lombok.version>
         <archunit.version>1.5.0</archunit.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
-        <awssdk.version>2.28.0</awssdk.version>
+        <awssdk.version>2.51.2</awssdk.version>
     </properties>
 
     <dependencyManagement>
