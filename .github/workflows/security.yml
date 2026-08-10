@@ -25,7 +25,7 @@ jobs:
     # the upload below failed on the missing file. `exit-code: 0` only suppresses the exit code for
     # FINDINGS; it does not survive a fatal scan error. Trivy's own log prescribes this remedy.
     - name: Set up JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'temurin'
