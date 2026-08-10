@@ -69,7 +69,7 @@ jobs:
     # MNT-2: publish only on a clean scan (Trivy fails the job above on findings) and only on main pushes.
     - name: Log in to container registry
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ${{ steps.img.outputs.registry }}
         username: ${{ github.actor }}
