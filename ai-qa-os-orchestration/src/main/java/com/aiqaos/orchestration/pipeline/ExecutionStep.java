@@ -55,6 +55,11 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
     @Autowired(required = false)
     private com.aiqaos.execution.scheduler.ShardedExecutionScheduler shardedExecutionScheduler;
 
+    // HEAL-3 (FI-HEAL3-A): present only when aiqaos.healing.locator-drift.enabled=true — records the
+    // locators a run failed on and attempts a governed heal for each. Best-effort; null by default.
+    @Autowired(required = false)
+    private com.aiqaos.orchestration.healing.LocatorDriftRecorder locatorDriftRecorder;
+
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ExecutionStep.class);
 
     @Override
@@ -282,6 +287,16 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
             }
 
             context.getQaWorkflowState().setExecutionResult(execResult);
+
+            // HEAL-3 (FI-HEAL3-A): record the locators this run demonstrably failed on, and attempt a
+            // governed heal for each. The list is empty unless a failure named exactly one locator,
+            // so passing runs and non-locator failures write nothing (ADR-094).
+            if (locatorDriftRecorder != null && !execResult.getBrokenLocators().isEmpty()) {
+                locatorDriftRecorder.record(
+                        execResult.getBrokenLocators(),
+                        context.getMetadata() != null ? context.getMetadata().getExecutionId() : null,
+                        org.slf4j.MDC.get("correlationId"));
+            }
 
             if (!execResult.isSuccess()) {
                 response.setStatus("FAILED");

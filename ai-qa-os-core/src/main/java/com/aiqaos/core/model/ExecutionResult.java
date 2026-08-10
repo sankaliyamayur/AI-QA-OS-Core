@@ -28,6 +28,11 @@ public class ExecutionResult {
     private List<String> artifacts = new ArrayList<>();
     private String reportLocation;
 
+    // HEAL-3 (FI-HEAL3-A): locators a run demonstrably failed on. Structured rather than folded into
+    // `logs`, because this is the drift signal the locator-healing loop consumes — a string in a log
+    // blob cannot be counted or correlated. Empty whenever no failure named exactly one locator.
+    private List<com.aiqaos.core.failure.BrokenLocatorSignal> brokenLocators = new ArrayList<>();
+
     public ExecutionResult() {}
 
     public String getTaskId() { return taskId; }
@@ -88,6 +93,12 @@ public class ExecutionResult {
     public void setStackTrace(String stackTrace) { this.stackTrace = stackTrace; }
 
     public List<String> getArtifacts() { return artifacts; }
+
+    /** HEAL-3: locators this run failed on; empty when no failure named exactly one (never guessed). */
+    public List<com.aiqaos.core.failure.BrokenLocatorSignal> getBrokenLocators() { return brokenLocators; }
+    public void setBrokenLocators(List<com.aiqaos.core.failure.BrokenLocatorSignal> brokenLocators) {
+        this.brokenLocators = brokenLocators != null ? brokenLocators : new ArrayList<>();
+    }
     public void setArtifacts(List<String> artifacts) { this.artifacts = artifacts; }
 
     public String getReportLocation() { return reportLocation; }

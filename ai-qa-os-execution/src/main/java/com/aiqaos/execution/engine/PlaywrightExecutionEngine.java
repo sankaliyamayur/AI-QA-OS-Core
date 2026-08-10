@@ -59,6 +59,11 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
     private String appBaseUrl;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // HEAL-3 (FI-HEAL3-A): stateless and pure, so constructed here rather than injected — this
+    // engine is also built directly in tests, and a constructor change would ripple into them.
+    private final com.aiqaos.execution.failure.BrokenLocatorExtractor brokenLocatorExtractor =
+            new com.aiqaos.execution.failure.BrokenLocatorExtractor();
     private volatile boolean running = false;
 
     @Override
@@ -208,6 +213,18 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
                     if (info.logPath        != null) result.getArtifacts().add("log:"        + info.testCaseId + "=" + info.logPath);
                 }
                 result.setLogs(result.getLogs() + artifactSummary);
+            }
+
+            // HEAL-3 (FI-HEAL3-A): surface the locators this run failed on. Only failures naming
+            // exactly one locator produce a signal — a navigation error or an ambiguous call log
+            // yields nothing rather than a guessed selector (ADR-094).
+            for (TestCaseArtifactInfo info : testArtifacts) {
+                brokenLocatorExtractor.extract(info.testCaseId, info.errorMessages)
+                        .ifPresent(result.getBrokenLocators()::add);
+            }
+            if (!result.getBrokenLocators().isEmpty()) {
+                log.info("[Playwright] Observed {} broken locator(s): {}",
+                        result.getBrokenLocators().size(), result.getBrokenLocators());
             }
 
         } catch (Exception e) {
@@ -372,6 +389,23 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
                             }
                         }
 
+                        // HEAL-3 (FI-HEAL3-A): the locator detail is in `errors[]`, not `error` —
+                        // Playwright puts the bare "Test timeout" first and the actionable call log
+                        // (naming the selector it was waiting on) in a later entry. Collect all of
+                        // them and let the extractor decide whether this was locator drift at all.
+                        List<String> errorMessages = new ArrayList<>();
+                        JsonNode singleError = testResult.path("error").path("message");
+                        if (singleError.isTextual()) {
+                            errorMessages.add(singleError.asText());
+                        }
+                        for (JsonNode err : testResult.path("errors")) {
+                            String msg = err.path("message").asText(null);
+                            if (msg != null && !msg.isBlank()) {
+                                errorMessages.add(msg);
+                            }
+                        }
+                        info.errorMessages = errorMessages;
+
                         // Capture stderr as execution log for failed tests
                         String stderr = testResult.path("stderr").asText(null);
                         String stdout = testResult.path("stdout").asText(null);
@@ -502,6 +536,8 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
         public String videoPath;
         public String tracePath;
         public String logPath;
+        /** HEAL-3: every error message Playwright attached to this result, in reporter order. */
+        public List<String> errorMessages = new ArrayList<>();
     }
 
     @Override
