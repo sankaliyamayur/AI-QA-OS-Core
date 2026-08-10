@@ -13,7 +13,12 @@ RUN mvn clean package -pl ai-qa-os-brain -am -DskipTests -B
 
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
-RUN addgroup -S qaosgroup && adduser -S qaosuser -G qaosgroup
+# MNT-2: patch OS packages in the runtime layer before dropping privileges. Trivy gates the
+# publish on CRITICAL/HIGH with `ignore-unfixed: true`, so what it reports are findings that
+# HAVE fixes in Alpine — upgrading is the actual remedy, not a suppression.
+RUN apk --no-cache upgrade \
+ && addgroup -S qaosgroup \
+ && adduser -S qaosuser -G qaosgroup
 USER qaosuser
 WORKDIR /app
 COPY --from=build --chown=qaosuser:qaosgroup /app/ai-qa-os-brain/target/*.jar app.jar
