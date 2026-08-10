@@ -74,6 +74,16 @@
             <artifactId>ai-qa-os-orchestration</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--
+          LRN-3 (FI-LRN3-A): the learning read-model. Already on the classpath transitively via
+          orchestration (which calls LearningObservationRecorder), but the dashboard compiles against
+          these types directly, so declare it rather than depend on someone else's dependency.
+        -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-learning</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-security</artifactId>
