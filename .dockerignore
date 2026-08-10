@@ -1,0 +1,32 @@
+# MNT-2: keep the docker build context to actual sources.
+#
+# The Dockerfiles now `COPY . .` (see deployment/docker/*.Dockerfile for why). In CI that is a fresh
+# checkout and harmless, but a local `docker build` would otherwise ship every target/ directory,
+# the vendored node_modules, ~100MB of Playwright output and whatever is in scratch/ — slow, and
+# worse, host-built target/ dirs landing in the image build where they can shadow a clean compile.
+#
+# Mirrors .gitignore; anything ignored there has no business in an image build either.
+
+# Build output
+target/
+bin/
+*.class
+
+# Vendored / generated
+node_modules/
+playwright-output/
+scratch/
+
+# Local tooling and state
+.git/
+.github/
+.idea/
+*.iml
+*.log
+
+# Deliberately NOT excluded, because both are build inputs and excluding them produces an image
+# that builds clean and fails at runtime:
+#   *.md   — ai-qa-os-agents/src/main/resources/prompts/*.md are the MOD-3 agent prompts, packaged
+#            into the jar and loaded at run time. Excluding them yields an agent with no prompts.
+#   deployment/migration — the gateway and dashboard copy those SQL files onto their classpath as a
+#            build resource (ADR-024), so Flyway would find no migrations.
