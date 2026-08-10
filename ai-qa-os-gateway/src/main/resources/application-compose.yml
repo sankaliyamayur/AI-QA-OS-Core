@@ -51,6 +51,14 @@ aiqaos:
       # object.provider=s3) so ExecutionStep pushes produced artifact files into the durable ArtifactStore
       # — cross-host reachable. Best-effort; never fails an execution.
       enabled: ${AIQAOS_ARTIFACTS_UPLOAD_ENABLED:false}
+    retention:
+      # FI-ENT5-F: default OFF — nothing is ever deleted unless explicitly armed. Set
+      # AIQAOS_ARTIFACTS_RETENTION_ENABLED=true to register ArtifactRetentionScheduler, which sweeps
+      # every registered tenant's namespaced tree (ADR-056) on its own timer and purges artifacts
+      # older than max-age-days. cron='-' registers it without a timer (on-demand ops trigger only).
+      enabled: ${AIQAOS_ARTIFACTS_RETENTION_ENABLED:false}
+      max-age-days: ${AIQAOS_ARTIFACTS_RETENTION_MAX_AGE_DAYS:30}
+      cron: ${AIQAOS_ARTIFACTS_RETENTION_CRON:0 0 3 * * *}
     object:
       provider: ${AIQAOS_ARTIFACTS_OBJECT_PROVIDER:in-memory}
       s3:
@@ -61,9 +69,18 @@ aiqaos:
         access-key: ${AIQAOS_ARTIFACTS_S3_ACCESS_KEY:${MINIO_ROOT_USER:minioadmin}}
         secret-key: ${AIQAOS_ARTIFACTS_S3_SECRET_KEY:${MINIO_ROOT_PASSWORD:minioadmin}}
         path-style-access: true
+  prompt:
+    history:
+      # FI-PE3-C: default OFF — no extra writes for existing deployments. Set
+      # AIQAOS_PROMPT_HISTORY_ENABLED=true so every prompt render is recorded to prompt_executions
+      # (template + version + compiled text + elapsed ms + the run's MDC correlationId), which is what
+      # feeds the dashboard's GET /api/dashboard/prompt-quality/history. Best-effort: a recording
+      # failure never fails the render.
+      enabled: ${AIQAOS_PROMPT_HISTORY_ENABLED:false}
+      max-prompt-chars: ${AIQAOS_PROMPT_HISTORY_MAX_PROMPT_CHARS:20000}
   memory:
     shortterm:
-      provider: redis               # T5: RedisMemoryStore (starter present via brain->memory);
+      provider: redis             # T5: RedisMemoryStore (starter present via brain->memory);
                                      # Spring Boot's auto RedisHealthIndicator surfaces it at /actuator/health
     vector:
       provider: in-memory           # QdrantStoreClient is a stub — keep the validated in-memory store

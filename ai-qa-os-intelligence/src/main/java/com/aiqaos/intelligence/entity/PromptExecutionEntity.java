@@ -5,7 +5,6 @@ import com.aiqaos.core.tenant.Tenanted;
 import org.hibernate.annotations.TenantId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
@@ -28,9 +27,23 @@ public class PromptExecutionEntity extends BaseEntity implements Tenanted {
     @Column(name = "version_id")
     private UUID versionId;
 
-    @Lob
-    @Column(name = "final_compiled_prompt", nullable = false)
+    // FI-PE3-C (V23): TEXT, not @Lob. Hibernate maps @Lob String to a Postgres large object (oid), which
+    // is not deleted with its row — a per-render producer would leak one large object per prompt.
+    @Column(name = "final_compiled_prompt", columnDefinition = "TEXT", nullable = false)
     private String finalCompiledPrompt;
+
+    // FI-PE3-C (V23): the resolved prompt identity. template_id/version_id are populated only when the
+    // template is registered in prompt_templates; prompts load from the classpath, so without these the
+    // history would be anonymous.
+    @Column(name = "template_name", length = 200)
+    private String templateName;
+
+    @Column(name = "version_label", length = 100)
+    private String versionLabel;
+
+    // FI-PE3-C (V23): the run key — MNT-6's pipeline correlationId, tying a prompt to its workflow run.
+    @Column(name = "correlation_id", length = 100)
+    private String correlationId;
 
     @Column(name = "trace_id")
     private String traceId;
@@ -46,6 +59,15 @@ public class PromptExecutionEntity extends BaseEntity implements Tenanted {
 
     public String getFinalCompiledPrompt() { return finalCompiledPrompt; }
     public void setFinalCompiledPrompt(String finalCompiledPrompt) { this.finalCompiledPrompt = finalCompiledPrompt; }
+
+    public String getTemplateName() { return templateName; }
+    public void setTemplateName(String templateName) { this.templateName = templateName; }
+
+    public String getVersionLabel() { return versionLabel; }
+    public void setVersionLabel(String versionLabel) { this.versionLabel = versionLabel; }
+
+    public String getCorrelationId() { return correlationId; }
+    public void setCorrelationId(String correlationId) { this.correlationId = correlationId; }
 
     public String getTraceId() { return traceId; }
     public void setTraceId(String traceId) { this.traceId = traceId; }

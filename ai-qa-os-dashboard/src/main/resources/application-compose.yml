@@ -19,6 +19,20 @@ aiqaos:
   security:
     # Frictionless local dev by default; set AIQAOS_SECURITY_ENABLED=true to exercise SEC-1 auth.
     enabled: ${AIQAOS_SECURITY_ENABLED:false}
+  eval:
+    regression:
+      alerts:
+        # FI-PE3-D: default OFF — upgrading never starts sending alerts. Set
+        # AIQAOS_REGRESSION_ALERTS_ENABLED=true and newly-detected prompt-quality regressions
+        # (FI-PE3-B detection over eval_results) are pushed through ENT-2's governed notification
+        # path as PROMPT_REGRESSION events. Alerts fire on transitions only: a persistent regression
+        # is reported once, and re-alerts only if the version recovers and regresses again.
+        enabled: ${AIQAOS_REGRESSION_ALERTS_ENABLED:false}
+        cron: ${AIQAOS_REGRESSION_ALERTS_CRON:0 0 8 * * *}
+        recipient: ${AIQAOS_REGRESSION_ALERTS_RECIPIENT:qa-leads}
+  notification:
+    # ENT-2: channel used when an event doesn't name one (senders are simulated — MOD-2/FI-MOD2-B).
+    default-channel: ${AIQAOS_NOTIFICATION_DEFAULT_CHANNEL:SLACK}
   artifacts:
     # ENT-5 (ADR-068): the dashboard SERVES durable artifacts via ArtifactController#serveFromStore
     # (/api/artifacts/store/**), so it needs the same object-store config as the gateway that uploads

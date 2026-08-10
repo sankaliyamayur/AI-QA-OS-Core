@@ -69,6 +69,16 @@ public class AutonomousQAPipelineOrchestrator {
     @Autowired(required = false)
     private com.aiqaos.testdata.synthetic.SyntheticGenerator syntheticGenerator;
 
+    // LRN-3 (Option B): record each terminal run as a learning observation, giving LRN-2's metrics a
+    // real source. This is the producer whose absence kept LRN-3 deferred (ADR-062/063) — the run
+    // pipeline is the only place a real pass/fail and a real AI-1 confidence exist together.
+    // Field-injected/optional: null in direct-construction tests and when the feature is off.
+    @Autowired(required = false)
+    private com.aiqaos.learning.metrics.LearningObservationRecorder learningObservationRecorder;
+
+    /** Context key under which a run's reported step confidences accumulate (LRN-3). */
+    private static final String OBSERVED_CONFIDENCES = "aiqaos.learning.observedConfidences";
+
     @Autowired
     public AutonomousQAPipelineOrchestrator(
             RequirementReaderStep requirementReaderStep,
@@ -139,6 +149,8 @@ public class AutonomousQAPipelineOrchestrator {
             // SCALE-2: emit the terminal lifecycle event (COMPLETED unless a step failed the run).
             publishLifecycle("FAILED".equals(response.getStatus()) ? "FAILED" : "COMPLETED",
                     workflowId, executionId, correlationId);
+            // LRN-3: record the run as a learning observation (terminal runs only).
+            recordLearningObservation(response, context, correlationId);
             return response;
         } finally {
             if (scope != null) {
@@ -153,6 +165,50 @@ public class AutonomousQAPipelineOrchestrator {
                 org.slf4j.MDC.remove("correlationId");
             }
         }
+    }
+
+    /**
+     * LRN-3: accumulate a step's reported confidence on the run's context. Values of 0 mean "not
+     * reported" ({@code WorkflowResponse}), so they are dropped here rather than averaged in later.
+     */
+    private void recordObservedConfidence(WorkflowContext context, double confidence) {
+        if (learningObservationRecorder == null || context == null || confidence <= 0.0) {
+            return;
+        }
+        Object existing = context.getVariables().get(OBSERVED_CONFIDENCES);
+        if (existing instanceof java.util.List<?> list) {
+            @SuppressWarnings("unchecked")
+            java.util.List<Double> confidences = (java.util.List<Double>) list;
+            confidences.add(confidence);
+        } else {
+            java.util.List<Double> confidences = new java.util.ArrayList<>();
+            confidences.add(confidence);
+            context.getVariables().put(OBSERVED_CONFIDENCES, confidences);
+        }
+    }
+
+    /**
+     * LRN-3 (Option B): persist the finished run as a learning observation — the producer LRN-2 was
+     * missing. Only <b>terminal</b> runs count: a PAUSED run (AI-1 sent it to human review) has no
+     * outcome yet, and recording it either way would be a guess. Best-effort by construction — the
+     * recorder swallows its own failures — and skipped entirely when the feature is off.
+     */
+    private void recordLearningObservation(WorkflowResponse response, WorkflowContext context,
+                                           String correlationId) {
+        if (learningObservationRecorder == null || response == null) {
+            return;
+        }
+        if ("PAUSED".equals(response.getStatus())) {
+            return; // not a terminal outcome — nothing truthful to record yet
+        }
+        java.util.List<Double> confidences = java.util.List.of();
+        if (context != null && context.getVariables().get(OBSERVED_CONFIDENCES) instanceof java.util.List<?> list) {
+            @SuppressWarnings("unchecked")
+            java.util.List<Double> observed = (java.util.List<Double>) list;
+            confidences = observed;
+        }
+        learningObservationRecorder.record(
+                !"FAILED".equals(response.getStatus()), confidences, System.currentTimeMillis(), correlationId);
     }
 
     // SCALE-2 (FI-SCALE2-A): best-effort publish of a workflow-lifecycle SystemEvent onto the EventBus
@@ -330,6 +386,11 @@ public class AutonomousQAPipelineOrchestrator {
             if ("BugAnalysisStep".equals(step.getName()) && bugAnalyticsService != null && context.getQaWorkflowState() != null && context.getQaWorkflowState().getBugAnalysisReport() != null) {
                 bugAnalyticsService.recordBug(executionId, workflowId, context.getQaWorkflowState().getBugAnalysisReport());
             }
+
+            // LRN-3: remember the confidence this step actually reported. Collected here, next to the
+            // AI-1 gate that consumes the same value, so the learning observation is built from the
+            // very numbers the gate judged — not a separate estimate.
+            recordObservedConfidence(context, stepResponse.getConfidence());
 
             // AI-1: confidence gate — evaluate the step's reported confidence and route.
             // Owned by the Brain (core interface, brain impl); absent → permissive (no-op).

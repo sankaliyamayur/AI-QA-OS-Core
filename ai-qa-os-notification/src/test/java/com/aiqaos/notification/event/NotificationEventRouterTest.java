@@ -62,6 +62,17 @@ class NotificationEventRouterTest {
     }
 
     @Test
+    void promptRegressionIsWarningNotCritical() {
+        // FI-PE3-D: nothing failed — quality declined. Ranking it CRITICAL would let prompt
+        // regressions drown out actual run failures.
+        router.route(NotificationEvent.of(NotificationEventType.PROMPT_REGRESSION, "v2",
+                "recent mean 0.600 vs earlier 0.900", "qa-leads"));
+        assertThat(slack.last.getSeverity()).isEqualTo(NotificationSeverity.WARNING);
+        assertThat(slack.last.getSubject()).contains("Prompt quality regression").contains("v2");
+        assertThat(slack.last.getBody()).contains("0.600");
+    }
+
+    @Test
     void eventChannelOverridesTheDefault() {
         router.route(new NotificationEvent(NotificationEventType.RUN_COMPLETE, "WF-4", "done",
                 "qa@acme.test", NotificationChannel.EMAIL));

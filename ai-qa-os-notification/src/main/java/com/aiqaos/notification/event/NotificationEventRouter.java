@@ -41,7 +41,9 @@ public class NotificationEventRouter {
     private NotificationSeverity severity(NotificationEventType type) {
         return switch (type) {
             case RUN_FAILURE -> NotificationSeverity.CRITICAL;
-            case APPROVAL_REQUEST -> NotificationSeverity.WARNING;
+            // FI-PE3-D: a quality decline needs attention but nothing is broken — WARNING, not CRITICAL,
+            // so prompt regressions can't drown out actual run failures.
+            case APPROVAL_REQUEST, PROMPT_REGRESSION -> NotificationSeverity.WARNING;
             case RUN_COMPLETE -> NotificationSeverity.INFO;
         };
     }
@@ -51,6 +53,7 @@ public class NotificationEventRouter {
             case RUN_COMPLETE -> "Run complete: " + e.getSubjectRef();
             case RUN_FAILURE -> "Run FAILED: " + e.getSubjectRef();
             case APPROVAL_REQUEST -> "Approval required: " + e.getSubjectRef();
+            case PROMPT_REGRESSION -> "Prompt quality regression: " + e.getSubjectRef();
         };
     }
 

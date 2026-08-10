@@ -26,8 +26,13 @@ public class PromptManagerImpl implements PromptEngine<PromptRequest, PromptResp
     @Autowired
     private PromptCacheManager cacheManager;
 
+    // FI-PE3-C: optional so the bean's absence (history disabled, or plain unit tests) changes nothing.
+    @Autowired(required = false)
+    private PromptExecutionRecorder executionRecorder;
+
     @Override
     public PromptResponse renderPrompt(PromptRequest request) {
+        long startedAt = System.nanoTime();
         String templateName = request.getTemplateName();
         String activeVersion = versionManager.getActiveVersion(templateName);
 
@@ -45,6 +50,12 @@ public class PromptManagerImpl implements PromptEngine<PromptRequest, PromptResp
 
             compiledText = promptCompiler.compile(templateText, params);
             cacheManager.cachePrompt(cacheKey, compiledText);
+        }
+
+        // FI-PE3-C: record the render that actually happened (opt-in; best-effort, never fails a render).
+        if (executionRecorder != null) {
+            long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+            executionRecorder.record(templateName, activeVersion, compiledText, elapsedMs);
         }
 
         PromptResponse response = new PromptResponse();

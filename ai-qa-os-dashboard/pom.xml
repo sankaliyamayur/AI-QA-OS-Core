@@ -74,6 +74,16 @@
             <artifactId>ai-qa-os-orchestration</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--
+          LRN-3 (FI-LRN3-A): the learning read-model. Already on the classpath transitively via
+          orchestration (which calls LearningObservationRecorder), but the dashboard compiles against
+          these types directly, so declare it rather than depend on someone else's dependency.
+        -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-learning</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-security</artifactId>
@@ -84,6 +94,20 @@
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-eval</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- FI-PE3-C: read prompt_executions for the per-execution prompt history read-model. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-intelligence</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- FI-PE3-D: push prompt-regression alerts through ENT-2's governed notification path. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-notification</artifactId>
             <version>${project.version}</version>
         </dependency>
 

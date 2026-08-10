@@ -2,6 +2,9 @@ target/
 .idea/
 *.iml
 *.class
+# Eclipse/JDT build output — mirrors the whole module (src, pom.xml, target) into bin/.
+# Not module-scoped on purpose: any module opened in Eclipse grows one.
+bin/
 playwright-output/
 *.log
 scratch/
