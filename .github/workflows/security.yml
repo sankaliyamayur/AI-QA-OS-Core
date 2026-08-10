@@ -18,7 +18,7 @@ jobs:
     name: Dependency CVE scan (report-only)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     # SEC-5 fix: populate ~/.m2 before scanning. Trivy's Java analyzer resolves parent/BOM poms to
     # determine dependency versions, and against a cold cache it fetched them from Maven Central and
     # hit `429 Too Many Requests ... Retry-After: 1800`, which is FATAL — so it produced no SARIF and
@@ -64,7 +64,7 @@ jobs:
     name: Secret scan (blocking)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     # SEC-5: fail the build on any committed secret. Scans the working tree (--no-git) so it gates the
     # current codebase without failing on historical commits; allowlist covers labeled test-only values.
     # (Historical secret rotation / history purge is tracked separately — FI-SEC5-C.)
