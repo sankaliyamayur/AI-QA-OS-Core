@@ -58,7 +58,7 @@
         <!-- Security overrides ahead of the Boot BOM — see the dependencyManagement block for why
              ordering (not a property override) is what actually applies these. -->
         <netty.version>4.2.17.Final</netty.version>
-        <postgresql.version>42.7.12</postgresql.version>
+        <postgresql.version>42.7.13</postgresql.version>
         <!-- springdoc tracks the Spring generation, so its major moves WITH Spring Boot's: 2.x is
              Boot 3 / Framework 6, 3.x is Boot 4 / Framework 7. On 2.5.0 under Boot 4 the Swagger UI
              page still loaded (it is static) while /v3/api-docs returned HTTP 500 —
