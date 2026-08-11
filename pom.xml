@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -54,7 +54,7 @@
              0.12.5. One property so they cannot drift apart again. -->
         <jjwt.version>0.13.0</jjwt.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
-        <awssdk.version>2.51.2</awssdk.version>
+        <awssdk.version>2.51.3</awssdk.version>
         <!-- Security overrides ahead of the Boot BOM — see the dependencyManagement block for why
              ordering (not a property override) is what actually applies these. -->
         <netty.version>4.2.16.Final</netty.version>
