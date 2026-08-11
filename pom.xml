@@ -54,7 +54,7 @@
              0.12.5. One property so they cannot drift apart again. -->
         <jjwt.version>0.13.0</jjwt.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
-        <awssdk.version>2.51.2</awssdk.version>
+        <awssdk.version>2.51.3</awssdk.version>
         <!-- Security overrides ahead of the Boot BOM — see the dependencyManagement block for why
              ordering (not a property override) is what actually applies these. -->
         <netty.version>4.2.17.Final</netty.version>
