@@ -27,28 +27,34 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- OBS-1: versions deliberately UNPINNED — the Spring Boot BOM manages the whole
+             OpenTelemetry set (api / sdk / exporter-otlp / sdk-testing) so they stay mutually
+             consistent, and they move together when Boot moves.
+
+             They were pinned per artifact, which let them drift: sdk-testing was bumped to 1.64.0
+             while api/sdk/exporter stayed at 1.38.0. OTel ships these as one coordinated release —
+             the mismatch throws NoSuchMethodError: TraceFlags.builder() as soon as the newer SDK
+             classes meet the older API. Same trap as jjwt (see <jjwt.version> in the root pom).
+
+             Do not reintroduce per-artifact versions here. To move OpenTelemetry, move Spring Boot. -->
 
         <!-- OpenTelemetry API -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api</artifactId>
-            <version>1.38.0</version>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk</artifactId>
-            <version>1.38.0</version>
         </dependency>
         <!-- OBS-1: OTLP exporter (config-gated → OTel Collector) + in-memory exporter for tests -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-otlp</artifactId>
-            <version>1.38.0</version>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk-testing</artifactId>
-            <version>1.64.0</version>
             <scope>test</scope>
         </dependency>
 
