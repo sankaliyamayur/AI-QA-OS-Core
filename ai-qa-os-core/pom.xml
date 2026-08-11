@@ -38,6 +38,20 @@
             <artifactId>spring-kafka</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Spring Boot 4 modularised autoconfiguration: spring-boot-autoconfigure no longer contains
+             a single Kafka class, so KafkaTemplate is never auto-configured and the gateway fails to
+             start with AIQAOS_EVENTS_TRANSPORT=kafka — "KafkaEventBus required a bean of type
+             KafkaTemplate that could not be found". spring-kafka alone supplies the classes that
+             satisfy @ConditionalOnClass but not the bean, so the whole suite stays green: every Kafka
+             test mocks KafkaTemplate rather than auto-configuring one. Only a live run reaches this.
+
+             Optional for the same reason as spring-kafka above. Same split as the test slices (see
+             spring-boot-data-jpa-test in ai-qa-os-observability). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
