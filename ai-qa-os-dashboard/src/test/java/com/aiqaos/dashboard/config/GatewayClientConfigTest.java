@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.ssl.NoSuchSslBundleException;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -129,6 +129,18 @@ class GatewayClientConfigTest {
         public void addBundleUpdateHandler(String name, java.util.function.Consumer<SslBundle> updateHandler) {
             updateHandlersFor.add(name);
             handlers.add(updateHandler);
+        }
+
+        // Spring Boot 4 widened the SslBundles contract with these two. Neither is exercised here —
+        // they exist so the stub still implements the interface.
+        @Override
+        public java.util.List<String> getBundleNames() {
+            return List.of();
+        }
+
+        @Override
+        public void addBundleRegisterHandler(java.util.function.BiConsumer<String, SslBundle> registerHandler) {
+            // not exercised
         }
     }
 }

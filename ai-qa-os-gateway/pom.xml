@@ -134,6 +134,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Spring Boot 4:  moved out of spring-boot-starter-test into its own slice module -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- ADR-089: in-memory DB so GatewayApplicationContextSmokeTest can start the real context
              without a Postgres. Schema comes from ddl-auto in that test, not Flyway. -->
         <dependency>
