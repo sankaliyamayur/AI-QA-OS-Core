@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
  *
  * <p>Design §0.4 chose {@code @WebMvcTest}, but the gateway's slice context proved brittle in this
  * JDK-25 environment (its {@code Filter} @Components need security beans absent from the slice, and
- * {@code @MockBean} — the usual fix — needs Mockito, which is unusable here). Per the approved
+ * {@code @MockitoBean} — the usual fix — needs Mockito, which is unusable here). Per the approved
  * fallback, these are plain unit tests over the controller's own logic with a hand-written stub
  * service. The HTTP wiring itself is standard Spring MVC; see {@link GlobalExceptionHandlerTest}
  * for the error contract.

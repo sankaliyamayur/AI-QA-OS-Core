@@ -38,7 +38,7 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
+            <version>${springdoc.version}</version>
         </dependency>
         <!-- Internal module dependencies -->
         <dependency>
@@ -110,11 +110,23 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
-        <!-- SCALE-2 (ADR-064): opt in to the distributed EventBus. Provides KafkaTemplate + autoconfig so
-             core's KafkaEventBus activates when aiqaos.events.transport=kafka; default stays in-process. -->
+        <!-- SCALE-2 (ADR-064): opt in to the distributed EventBus, so core's KafkaEventBus activates
+             when aiqaos.events.transport=kafka; default stays in-process.
+
+             TWO artifacts are needed, not one. spring-kafka supplies the KafkaTemplate *class*, which
+             is enough to satisfy @ConditionalOnClass and construct the KafkaEventBus bean; the
+             KafkaTemplate *bean* comes from Boot's Kafka autoconfiguration, which in Boot 4 moved out
+             of spring-boot-autoconfigure (that jar now contains zero Kafka classes) into
+             spring-boot-kafka. With only the first, startup fails on "KafkaEventBus required a bean of
+             type KafkaTemplate that could not be found" — but only when the Kafka transport is
+             actually selected, which no test does, so the suite stays green. Found by a live run. -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
         </dependency>
         <!-- ENT-5 (ADR-068): opt in to the durable S3/MinIO artifact object store. The gateway runs the
              ExecutionStep that uploads produced artifacts; execution declares these as optional (non-
@@ -132,6 +144,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Spring Boot 4:  moved out of spring-boot-starter-test into its own slice module -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- ADR-089: in-memory DB so GatewayApplicationContextSmokeTest can start the real context

@@ -20,7 +20,7 @@ import com.aiqaos.healing.memory.RecoveryHistoryStore;
 import com.aiqaos.healing.strategy.RecoveryStrategyResolver;
 import com.aiqaos.memory.store.MemoryStore;
 import com.aiqaos.orchestration.validation.LLMResponseValidator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -102,8 +102,6 @@ public class SelfHealingStepIntegrationTest {
                 NoOpObservabilityEventPublisherFactory.create());
 
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        mapper.findAndRegisterModules();
 
         LLMResponseValidator validator = new LLMResponseValidator();
         ReflectionTestUtils.setField(validator, "objectMapper", mapper);

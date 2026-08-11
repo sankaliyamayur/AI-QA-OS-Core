@@ -9,7 +9,7 @@ import com.aiqaos.integration.plugin.PluginProperties;
 import com.aiqaos.integration.plugin.PluginRegistry;
 import com.aiqaos.integration.plugin.marketplace.PluginCatalog;
 import com.aiqaos.integration.plugin.marketplace.PluginListing;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 

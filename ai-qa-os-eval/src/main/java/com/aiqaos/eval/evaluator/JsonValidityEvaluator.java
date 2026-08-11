@@ -3,8 +3,8 @@ package com.aiqaos.eval.evaluator;
 import com.aiqaos.eval.contract.EvaluationCase;
 import com.aiqaos.eval.contract.EvaluationResult;
 import com.aiqaos.eval.contract.Evaluator;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.springframework.stereotype.Component;
 

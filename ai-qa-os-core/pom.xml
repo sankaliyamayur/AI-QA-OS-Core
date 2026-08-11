@@ -23,19 +23,33 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- Jackson 3 (Spring Boot 4). The groupId moved com.fasterxml.jackson.* -> tools.jackson.*;
+             annotations are the exception and remain under com.fasterxml.jackson.annotation, pulled
+             in transitively by databind. jackson-datatype-jsr310 is gone: java.time support is built
+             into Jackson 3's databind, so JavaTimeModule no longer exists and must not be registered. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
         <!-- SCALE-2 (ADR-064): distributed EventBus binding. Optional — not transitive, so modules that
              don't opt in carry zero Kafka weight; KafkaEventBus is @ConditionalOnClass(KafkaTemplate). -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Spring Boot 4 modularised autoconfiguration: spring-boot-autoconfigure no longer contains
+             a single Kafka class, so KafkaTemplate is never auto-configured and the gateway fails to
+             start with AIQAOS_EVENTS_TRANSPORT=kafka — "KafkaEventBus required a bean of type
+             KafkaTemplate that could not be found". spring-kafka alone supplies the classes that
+             satisfy @ConditionalOnClass but not the bean, so the whole suite stays green: every Kafka
+             test mocks KafkaTemplate rather than auto-configuring one. Only a live run reaches this.
+
+             Optional for the same reason as spring-kafka above. Same split as the test slices (see
+             spring-boot-data-jpa-test in ai-qa-os-observability). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>

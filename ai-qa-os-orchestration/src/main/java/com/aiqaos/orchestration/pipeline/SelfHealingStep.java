@@ -17,7 +17,7 @@ import com.aiqaos.core.model.QAExecutionReport;
 import com.aiqaos.core.model.SelfHealingResult;
 import com.aiqaos.healing.engine.SelfHealingEngine;
 import com.aiqaos.orchestration.validation.LLMResponseValidator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -108,7 +108,7 @@ public class SelfHealingStep implements WorkflowStep<WorkflowRequest, WorkflowRe
 
             // 4. Validate and Normalize response
             String normalizedJson = responseValidator.validateAndNormalize(AgentType.SELF_HEALING_ENGINEER, agentRes.getContent());
-            com.fasterxml.jackson.databind.JsonNode decision = objectMapper.readTree(normalizedJson);
+            tools.jackson.databind.JsonNode decision = objectMapper.readTree(normalizedJson);
             boolean retryRequired = decision.has("retryRequired") ? decision.get("retryRequired").asBoolean() : true;
             String healingAction = decision.has("healingAction") ? decision.get("healingAction").asText() : "RETRY_ONLY";
             String reason = decision.has("reason") ? decision.get("reason").asText() : "Self-healing execution retry";

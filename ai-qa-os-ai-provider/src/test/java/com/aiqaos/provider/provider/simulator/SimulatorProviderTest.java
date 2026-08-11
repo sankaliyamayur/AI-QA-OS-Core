@@ -74,7 +74,7 @@ public class SimulatorProviderTest {
     @DisplayName("DX-3 regression (live E2E): each pipeline purpose routes to schema-valid JSON, even when the "
             + "prompt mentions Playwright — previously TEST_CASE/SCRIPT matched keyword branches and returned non-JSON")
     void testPurposeRoutingReturnsSchemaValidJsonPerStep() throws Exception {
-        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
 
         // The real test-case prompt for US-001 mentions Playwright/Selenium/automation, which used to
         // match the "script" branch and return a //-commented script the step could not parse as JSON.

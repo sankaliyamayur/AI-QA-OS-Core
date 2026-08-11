@@ -6,9 +6,9 @@ import com.aiqaos.orchestration.repository.WorkflowExecutionRepository;
 import com.aiqaos.orchestration.service.WorkflowExecutionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,8 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** See ExecutionHistoryControllerTest for why this wires a real service over mocked repos. */
 @WebMvcTest(value = ComparisonController.class, excludeAutoConfiguration = {
-    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
-    org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration.class
+    org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration.class,
+    org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class
 })
 @Import(ComparisonControllerTest.TestConfig.class)
 class ComparisonControllerTest {
@@ -32,19 +32,19 @@ class ComparisonControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private WorkflowExecutionRepository workflowExecutionRepository;
 
-    @MockBean
+    @MockitoBean
     private LLMCostRepository llmCostRepository;
 
-    @MockBean
+    @MockitoBean
     private com.aiqaos.security.jwt.JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
+    @MockitoBean
     private com.aiqaos.security.rbac.UserRepository userRepository;
 
-    @MockBean
+    @MockitoBean
     private com.aiqaos.security.monitoring.SecurityMetricsCollector securityMetricsCollector;
 
     @TestConfiguration

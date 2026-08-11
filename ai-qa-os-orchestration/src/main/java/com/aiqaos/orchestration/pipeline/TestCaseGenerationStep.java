@@ -13,7 +13,7 @@ import com.aiqaos.core.contract.AgentRequest;
 import com.aiqaos.core.contract.AgentResponse;
 import com.aiqaos.core.context.AgentContext;
 import com.aiqaos.orchestration.validation.LLMResponseValidator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

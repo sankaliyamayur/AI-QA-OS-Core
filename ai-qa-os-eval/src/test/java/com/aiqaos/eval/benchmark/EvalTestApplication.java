@@ -1,8 +1,8 @@
 package com.aiqaos.eval.benchmark;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 
 /**
  * Minimal boot config for the opt-in live benchmark ({@link PromptBenchmarkLiveTest}). Scans the

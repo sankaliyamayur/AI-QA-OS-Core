@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -39,7 +39,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-boot.version>3.3.0</spring-boot.version>
+        <spring-boot.version>4.1.0</spring-boot.version>
         <spring-cloud.version>2023.0.2</spring-cloud.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -48,17 +48,53 @@
         <lombok.version>1.18.34</lombok.version>
         <archunit.version>1.5.0</archunit.version>
         <!-- SEC-1/SEC-2: jjwt ships as three coordinated artifacts (api + impl + jackson) that must
-             be the SAME version — mixing them fails at runtime when the impl/jackson services the
+             be the SAME version â€” mixing them fails at runtime when the impl/jackson services the
              api loads are not the ones it expects. Hardcoding the version three times let Dependabot
              bump them independently, and it did: impl reached 0.13.0 while api and jackson sat at
              0.12.5. One property so they cannot drift apart again. -->
         <jjwt.version>0.13.0</jjwt.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
         <awssdk.version>2.51.2</awssdk.version>
+        <!-- Security overrides ahead of the Boot BOM — see the dependencyManagement block for why
+             ordering (not a property override) is what actually applies these. -->
+        <netty.version>4.2.16.Final</netty.version>
+        <postgresql.version>42.7.12</postgresql.version>
+        <!-- springdoc tracks the Spring generation, so its major moves WITH Spring Boot's: 2.x is
+             Boot 3 / Framework 6, 3.x is Boot 4 / Framework 7. On 2.5.0 under Boot 4 the Swagger UI
+             page still loaded (it is static) while /v3/api-docs returned HTTP 500 —
+             NoSuchMethodError on Framework 7's ControllerAdviceBean. A green build does not catch
+             this; nothing tested the endpoint.
+
+             It was declared inline in both ai-qa-os-config and ai-qa-os-gateway, which is how
+             versions drift apart (see jjwt above). One property, referenced by both. -->
+        <springdoc.version>3.1.0</springdoc.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- SECURITY OVERRIDES — these MUST stay above spring-boot-dependencies.
+                 For imported BOMs the first declaration wins, and a <netty.version> property would do
+                 nothing at all here: property overrides only work with spring-boot-starter-parent, and
+                 this project imports the BOM instead. Ordering is the mechanism.
+
+                 Boot 4.1.0 pins Netty 4.2.15.Final and pgjdbc 42.7.11; Trivy flags 16 HIGH CVEs across
+                 netty-codec-{http,http2,http3,compression} and 2 HIGH against the driver. Both are
+                 fixed by a single patch release, so this buys 18 HIGH alerts for two patch bumps.
+
+                 DELETE these once the Boot BOM catches up — pinning ahead of the BOM is a liability if
+                 it lingers. Verify with: mvn dependency:tree -Dincludes=io.netty:*,org.postgresql:* -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
             <!-- Spring Boot Dependencies -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -82,7 +118,7 @@
                 <version>${archunit.version}</version>
                 <scope>test</scope>
             </dependency>
-            <!-- ENT-5 (ADR-068): AWS SDK v2 BOM — keeps the optional S3 deps versionless + consistent. -->
+            <!-- ENT-5 (ADR-068): AWS SDK v2 BOM â€” keeps the optional S3 deps versionless + consistent. -->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
@@ -137,7 +173,7 @@
                     <version>3.2.5</version>
                 </plugin>
 
-                <!-- ─── DX-8: Code Quality Plugins ──────────────────────────── -->
+                <!-- â”€â”€â”€ DX-8: Code Quality Plugins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 
                 <!-- JaCoCo: coverage instrumentation + report -->
                 <plugin>
@@ -247,7 +283,7 @@
     </build>
 
     <!--
-        DX-8: quality profile — run `mvn verify -Pquality` to activate Checkstyle+SpotBugs.
+        DX-8: quality profile â€” run `mvn verify -Pquality` to activate Checkstyle+SpotBugs.
         Kept opt-in (not default) so routine `mvn test` stays fast; CI adds -Pquality on PRs.
     -->
     <profiles>

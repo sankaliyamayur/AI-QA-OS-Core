@@ -7,8 +7,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.ssl.NoSuchSslBundleException;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
-import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
@@ -48,11 +48,13 @@ public class GatewayClientConfig {
         try {
             // ADR-093: route through a factory that can swap its TLS material, then subscribe to the
             // bundle. `reload-on-update` refreshes the bundle when the mounted keystore changes, but
-            // a client built with setSslBundle(...) would have already baked in the old SSLContext —
+            // a client built from a bundle would have already baked in the old SSLContext —
             // so without this handler a rotated certificate needs a pod restart.
             SslBundle bundle = sslBundles.getBundle(bundleName);
+            // Boot 4: ClientHttpRequestFactories/…Settings were removed. detect() keeps the previous
+            // behaviour of using whichever HTTP client is on the classpath rather than pinning one.
             ReloadableSslRequestFactory factory =
-                    new ReloadableSslRequestFactory(bundle, ClientHttpRequestFactorySettings.DEFAULTS);
+                    new ReloadableSslRequestFactory(bundle, ClientHttpRequestFactoryBuilder.detect());
             sslBundles.addBundleUpdateHandler(bundleName, updated -> {
                 log.info("[mtls] SSL bundle '{}' updated — rebuilding the gateway client", bundleName);
                 factory.reload(updated);

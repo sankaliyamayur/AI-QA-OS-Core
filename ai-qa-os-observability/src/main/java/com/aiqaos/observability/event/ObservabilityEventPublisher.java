@@ -8,8 +8,8 @@ import com.aiqaos.observability.repository.AgentMetricsRepository;
 import com.aiqaos.observability.repository.BugMetricRepository;
 import com.aiqaos.observability.repository.HealingMetricRepository;
 import com.aiqaos.observability.repository.TimelineEventRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -86,7 +86,7 @@ public class ObservabilityEventPublisher {
     private String toJson(Object payload) {
         try {
             return objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.warn("Failed to serialize observability event payload: {}", e.getMessage());
             return String.valueOf(payload);
         }

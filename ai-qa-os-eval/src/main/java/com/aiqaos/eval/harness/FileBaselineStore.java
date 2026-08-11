@@ -1,6 +1,7 @@
 package com.aiqaos.eval.harness;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -29,8 +30,12 @@ public class FileBaselineStore implements BaselineStore {
         }
         try {
             return mapper.readValue(file.toFile(), Baseline.class);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read baseline: " + file, e);
+        } catch (JacksonException e) {
+            // Jackson 3 made its exceptions unchecked, so `catch (IOException)` here became
+            // unreachable and stopped compiling. Both store methods keep throwing UncheckedIOException
+            // so callers see one failure type regardless of which side of the read/write split failed;
+            // the IOException wrapper exists only to satisfy that type.
+            throw new UncheckedIOException("Failed to read baseline: " + file, new IOException(e));
         }
     }
 
