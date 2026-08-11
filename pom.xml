@@ -55,6 +55,10 @@
         <jjwt.version>0.13.0</jjwt.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
         <awssdk.version>2.51.2</awssdk.version>
+        <!-- Security overrides ahead of the Boot BOM — see the dependencyManagement block for why
+             ordering (not a property override) is what actually applies these. -->
+        <netty.version>4.2.16.Final</netty.version>
+        <postgresql.version>42.7.12</postgresql.version>
         <!-- springdoc tracks the Spring generation, so its major moves WITH Spring Boot's: 2.x is
              Boot 3 / Framework 6, 3.x is Boot 4 / Framework 7. On 2.5.0 under Boot 4 the Swagger UI
              page still loaded (it is static) while /v3/api-docs returned HTTP 500 —
@@ -68,6 +72,29 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- SECURITY OVERRIDES — these MUST stay above spring-boot-dependencies.
+                 For imported BOMs the first declaration wins, and a <netty.version> property would do
+                 nothing at all here: property overrides only work with spring-boot-starter-parent, and
+                 this project imports the BOM instead. Ordering is the mechanism.
+
+                 Boot 4.1.0 pins Netty 4.2.15.Final and pgjdbc 42.7.11; Trivy flags 16 HIGH CVEs across
+                 netty-codec-{http,http2,http3,compression} and 2 HIGH against the driver. Both are
+                 fixed by a single patch release, so this buys 18 HIGH alerts for two patch bumps.
+
+                 DELETE these once the Boot BOM catches up — pinning ahead of the BOM is a liability if
+                 it lingers. Verify with: mvn dependency:tree -Dincludes=io.netty:*,org.postgresql:* -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
             <!-- Spring Boot Dependencies -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
