@@ -25,7 +25,7 @@ import com.aiqaos.learning.analyzer.FailurePatternAnalyzer;
 import com.aiqaos.learning.healing.SelfHealingEngine;
 import com.aiqaos.learning.memory.LearningMemoryStore;
 import com.aiqaos.memory.store.MemoryStore;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

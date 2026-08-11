@@ -5,7 +5,7 @@ import com.aiqaos.observability.repository.AgentMetricsRepository;
 import com.aiqaos.observability.repository.BugMetricRepository;
 import com.aiqaos.observability.repository.HealingMetricRepository;
 import com.aiqaos.observability.repository.TimelineEventRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.context.ApplicationEventPublisher;
 
 import static org.mockito.ArgumentMatchers.any;

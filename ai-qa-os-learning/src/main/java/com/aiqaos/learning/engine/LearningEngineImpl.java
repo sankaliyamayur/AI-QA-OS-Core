@@ -17,7 +17,7 @@ import com.aiqaos.learning.healing.SelfHealingEngine;
 import com.aiqaos.learning.memory.LearningMemoryStore;
 import com.aiqaos.learning.reflection.ReflectionResult;
 import com.aiqaos.learning.reflection.ReflectionService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

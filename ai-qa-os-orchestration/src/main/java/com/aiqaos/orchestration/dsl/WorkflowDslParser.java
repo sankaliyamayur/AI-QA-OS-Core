@@ -1,7 +1,7 @@
 package com.aiqaos.orchestration.dsl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLFactory;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
 

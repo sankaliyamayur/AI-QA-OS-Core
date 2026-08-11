@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.aiqaos.core.model.ExecutionResult;
 import com.aiqaos.core.model.GeneratedScriptSuite;
 import com.aiqaos.execution.engine.ExecutionConfiguration;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
  */
 class ExecutionJobSerializationTest {
 
-    private final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
     void executionJob_roundTrips() throws Exception {

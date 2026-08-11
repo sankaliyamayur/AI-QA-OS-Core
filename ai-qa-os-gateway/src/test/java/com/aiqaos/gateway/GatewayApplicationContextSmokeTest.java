@@ -1,9 +1,14 @@
 package com.aiqaos.gateway;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.aiqaos.gateway.controller.WorkflowController;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -12,6 +17,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContext;
 
 /**
@@ -29,9 +35,17 @@ import org.springframework.context.ApplicationContext;
  */
 @SpringBootTest(
         classes = GatewayApplication.class,
-        // MOCK, not NONE — a servlet app whose security chain needs the servlet context (see the
-        // dashboard counterpart, where NONE failed on mvcHandlerMappingIntrospector).
-        webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        // RANDOM_PORT, not MOCK and not NONE. NONE fails outright — a servlet app whose security chain
+        // needs the servlet context (see the dashboard counterpart, which failed on
+        // mvcHandlerMappingIntrospector). MOCK was enough while this class only inspected beans, but
+        // theGeneratedOpenApiSpecIsServed makes a real HTTP request, so Tomcat has to be up.
+        //
+        // That test lives here rather than in its own class on purpose: TelemetryConfig calls
+        // GlobalOpenTelemetry.set, a JVM-wide singleton that throws "has already been called" on a
+        // second context. Surefire forks per module, so the gateway module gets exactly one
+        // application context — a separate @SpringBootTest class here would fail on OTel, not on
+        // anything it meant to assert.
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "spring.datasource.url=jdbc:h2:mem:gateway-smoke;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
                 "spring.datasource.driver-class-name=org.h2.Driver",
@@ -49,6 +63,35 @@ class GatewayApplicationContextSmokeTest {
 
     @Autowired
     private ApplicationContext context;
+
+    @LocalServerPort
+    private int port;
+
+    /**
+     * Proves the OpenAPI spec is actually served, not merely that springdoc is on the classpath.
+     *
+     * <p>springdoc's major version tracks the Spring generation (2.x = Boot 3, 3.x = Boot 4). During
+     * the Boot 4 upgrade the build stayed green on springdoc 2.5.0 — all 634 tests passing — while
+     * {@code /v3/api-docs} returned HTTP 500, {@code NoSuchMethodError} on Framework 7's
+     * {@code ControllerAdviceBean}. Nothing caught it because nothing requested the endpoint.
+     *
+     * <p>{@code /swagger-ui/index.html} is deliberately not the assertion: it is a static page and
+     * served a healthy 200 throughout that outage. Only the generated spec proves the integration.
+     */
+    @Test
+    void theGeneratedOpenApiSpecIsServed() throws Exception {
+        HttpResponse<String> response = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode(),
+                "springdoc failed to generate the spec — usually a springdoc major that does not match "
+                        + "the Spring generation. Body: " + response.body());
+        assertTrue(response.body().contains("\"openapi\""),
+                "expected an OpenAPI document, got: " + response.body());
+        assertTrue(response.body().contains("\"paths\""),
+                "the spec must describe the gateway's endpoints, got: " + response.body());
+    }
 
     /** Fails before the body runs if the scan conflicts or any bean cannot be satisfied. */
     @Test

@@ -55,6 +55,15 @@
         <jjwt.version>0.13.0</jjwt.version>
         <!-- ENT-5 (ADR-068): AWS SDK v2 for the S3/MinIO object-storage binding (optional, execution only). -->
         <awssdk.version>2.51.2</awssdk.version>
+        <!-- springdoc tracks the Spring generation, so its major moves WITH Spring Boot's: 2.x is
+             Boot 3 / Framework 6, 3.x is Boot 4 / Framework 7. On 2.5.0 under Boot 4 the Swagger UI
+             page still loaded (it is static) while /v3/api-docs returned HTTP 500 —
+             NoSuchMethodError on Framework 7's ControllerAdviceBean. A green build does not catch
+             this; nothing tested the endpoint.
+
+             It was declared inline in both ai-qa-os-config and ai-qa-os-gateway, which is how
+             versions drift apart (see jjwt above). One property, referenced by both. -->
+        <springdoc.version>3.1.0</springdoc.version>
     </properties>
 
     <dependencyManagement>

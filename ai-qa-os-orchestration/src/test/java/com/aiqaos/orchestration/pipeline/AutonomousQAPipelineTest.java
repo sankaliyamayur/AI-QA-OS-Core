@@ -42,7 +42,7 @@ import com.aiqaos.orchestration.service.AgentMetricsService;
 import com.aiqaos.orchestration.service.BugAnalyticsService;
 import com.aiqaos.orchestration.service.TimelineService;
 import com.aiqaos.orchestration.service.WorkflowExecutionService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -246,8 +246,6 @@ public class AutonomousQAPipelineTest {
         ReflectionTestUtils.setField(agentManager, "agentRegistry", registry);
 
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        mapper.findAndRegisterModules();
 
         LLMResponseValidator responseValidator = new LLMResponseValidator();
         ReflectionTestUtils.setField(responseValidator, "objectMapper", mapper);
@@ -401,7 +399,6 @@ public class AutonomousQAPipelineTest {
 
         ApplicationEventPublisher springEventPublisher = mock(ApplicationEventPublisher.class);
         ObjectMapper observabilityMapper = new ObjectMapper();
-        observabilityMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
         ObservabilityEventPublisher observabilityEventPublisher = new ObservabilityEventPublisher(
                 agentMetricsRepository, timelineEventRepository, bugMetricRepository,

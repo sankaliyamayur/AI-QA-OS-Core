@@ -14,7 +14,7 @@ import com.aiqaos.eval.harness.PromptRegressionHarness;
 import com.aiqaos.eval.harness.PromptRunner;
 import com.aiqaos.eval.repository.EvaluationResultRepository;
 import com.aiqaos.eval.service.PromptEvaluationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
