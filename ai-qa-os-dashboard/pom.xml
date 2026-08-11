@@ -20,6 +20,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Spring Boot 4: RestTemplateBuilder and the client HTTP factory API moved out of
+             spring-boot-starter-web into this module; SEC-6 (ADR-091/093) builds the gateway client
+             from them, so it must be declared explicitly. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
