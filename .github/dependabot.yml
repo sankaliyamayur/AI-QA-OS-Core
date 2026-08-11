@@ -9,26 +9,11 @@ updates:
     labels:
       - "dependencies"
       - "security"
-    ignore:
-      # springdoc 3.x requires Spring Boot 4; this project is on Boot 3.3.0
-      # (<spring-boot.version> in the root pom). Every 3.x proposal therefore fails
-      # GatewayApplicationContextSmokeTest at context load:
-      #
-      #   Error processing condition on
-      #   org.springframework.boot.servlet.autoconfigure.actuate.web.mappings.ServletMappingsAutoConfiguration
-      #   → IllegalStateException: EndpointCondition must be used on @Bean methods ...
-      #
-      # (`org.springframework.boot.servlet.autoconfigure.*` is a Boot 4 package path.)
-      # It compiles and unit-tests cleanly, so this only shows up once something starts
-      # the application context — see PR #6 and ADR-092.
-      #
-      # REMOVE THIS ENTRY when the platform moves to Spring Boot 4; springdoc 3.x is
-      # wanted then, and leaving it here would silently pin us to 2.x.
-      #
-      # Scoped to major only: 2.x patches and minors still raise PRs as normal, so
-      # security fixes on the line we actually run are not suppressed.
-      - dependency-name: "org.springdoc:springdoc-openapi-starter-webmvc-ui"
-        update-types: ["version-update:semver-major"]
+    # The springdoc major-version ignore that used to sit here is gone, as its own comment
+    # instructed: it existed only because springdoc 3.x requires Spring Boot 4 while the
+    # platform was on 3.3.0 (see PR #6 and ADR-092). The platform is on Boot 4.1.0 and
+    # springdoc 3.1.0 now, so keeping it would silently pin us to a 2.x line that does not
+    # work here at all — on Boot 4, springdoc 2.5.0 serves /v3/api-docs as HTTP 500.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
