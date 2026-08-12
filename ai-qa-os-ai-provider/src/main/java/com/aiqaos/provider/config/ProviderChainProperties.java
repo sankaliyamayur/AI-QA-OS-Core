@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 /**
  * Failover chain configuration: which real providers are tried, in what order, and whether the
@@ -16,11 +17,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     chain: openai,claude,gemini,ollama
  * </pre>
  *
+ * <p><b>Registered with @Component deliberately.</b> @ConfigurationProperties alone binds nothing
+ * unless something declares it — this class was originally annotation-only and no
+ * @EnableConfigurationProperties listed it, so aiqaos.provider.mode and .chain silently did not
+ * bind and LLMProviderManager fell through to hardcoded defaults. The defaults happened to be the
+ * safe ones, which is exactly why it went unnoticed.
+ *
  * <p><b>Mode is the safety switch.</b> In {@code real} — the default — the Simulator is excluded
  * from the chain entirely, so no provider failure can reach it. It becomes reachable only when mode
  * is {@code simulated} or the request explicitly names a simulator/mock model. Defaulting to real
  * is deliberate: a misconfiguration should produce a loud failure, not a quiet fake pass.
  */
+@Component
 @ConfigurationProperties(prefix = "aiqaos.provider")
 public class ProviderChainProperties {
 

@@ -85,8 +85,26 @@ public class ScriptGenerationStep implements WorkflowStep<WorkflowRequest, Workf
 
             context.getQaWorkflowState().setGeneratedScriptSuite(masterSuite);
 
+            // Producing no script is a failure, not a success.
+            //
+            // The agent can return a well-formed but empty suite — a weak or truncated model answer
+            // normalises to scripts:[] without throwing. Reporting SUCCESS there is worse than
+            // failing: ExecutionStep writes nothing, Playwright runs whatever .spec files happen to
+            // be left in the tests directory from a previous run, and those stale results are
+            // reported as this run's. A live run did exactly that — it "passed" two tests written six
+            // hours earlier by an unrelated run while this run generated nothing at all.
+            if (masterSuite.getScripts() == null || masterSuite.getScripts().isEmpty()) {
+                response.setStatus("FAILED");
+                response.setMessage("Failed in ScriptGenerationStep: the agent returned no usable "
+                        + "script for any of the " + tcSuite.getTestCases().size() + " test case(s). "
+                        + "Refusing to continue, because executing a stale tests directory would "
+                        + "report a previous run's results as this one's.");
+                return response;
+            }
+
             response.setStatus("SUCCESS");
-            response.setMessage("Successfully generated automation scripts");
+            response.setMessage("Successfully generated automation scripts ("
+                    + masterSuite.getScripts().size() + ")");
         } catch (Exception e) {
             response.setStatus("FAILED");
             response.setMessage("Failed in ScriptGenerationStep: " + e.getMessage());

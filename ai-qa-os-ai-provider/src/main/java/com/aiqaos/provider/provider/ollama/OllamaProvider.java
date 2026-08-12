@@ -34,12 +34,22 @@ public class OllamaProvider implements LLMProvider, StreamingLLMProvider {
     private final String baseUrl;
     private final String model;
 
+    /**
+     * @param readTimeoutSeconds how long to wait for a completion. Configurable because the old
+     *     hardcoded 120s is not a property of Ollama but of the machine running it: a local model is
+     *     as fast as the CPU or GPU underneath. Measured on a GPU-less Intel i3-2100, qwen2.5:3b
+     *     produces ~2.8 tokens/sec, so a 500-token script needs ~3 minutes and a 1500-token one
+     *     ~9 — every one of which the 120s ceiling turned into a timeout, i.e. into a provider
+     *     failure, for a model that was working correctly and merely slow. 600s suits CPU inference;
+     *     lower it for a GPU host, where a hung request should be noticed quickly.
+     */
     @Autowired
     public OllamaProvider(ObjectMapper objectMapper,
                           @Value("${aiqaos.provider.ollama.enabled:false}") boolean enabled,
                           @Value("${aiqaos.provider.ollama.base-url:http://localhost:11434}") String baseUrl,
-                          @Value("${aiqaos.provider.ollama.model:llama3}") String model) {
-        this(defaultRestClient(), objectMapper, enabled, baseUrl, model);
+                          @Value("${aiqaos.provider.ollama.model:llama3}") String model,
+                          @Value("${aiqaos.provider.ollama.read-timeout-seconds:600}") int readTimeoutSeconds) {
+        this(defaultRestClient(readTimeoutSeconds), objectMapper, enabled, baseUrl, model);
     }
 
     /** Test seam: inject a RestClient (e.g. bound to MockRestServiceServer). */
@@ -51,10 +61,11 @@ public class OllamaProvider implements LLMProvider, StreamingLLMProvider {
         this.model = model;
     }
 
-    private static RestClient defaultRestClient() {
+    private static RestClient defaultRestClient(int readTimeoutSeconds) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        // Connect stays short: a local server either accepts immediately or is not running.
         requestFactory.setConnectTimeout(10_000);
-        requestFactory.setReadTimeout(120_000);   // local generation can be slow
+        requestFactory.setReadTimeout(Math.max(1, readTimeoutSeconds) * 1000);
         return RestClient.builder().requestFactory(requestFactory).build();
     }
 
