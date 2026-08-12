@@ -110,6 +110,21 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+        <!-- Boot 4 modularised autoconfiguration: spring-boot-autoconfigure-4.1.0 contains zero
+             Flyway classes, so with only flyway-core on the classpath NO Flyway bean is created and
+             migrations are silently skipped. The gateway is the sole owner of the canonical schema
+             (ADR-024), so that means the schema simply stops evolving.
+
+             It fails quietly rather than loudly: DatabaseMigrationManager finds no Flyway bean and
+             logs "Flyway not active in current profile (schema management skipped)" at INFO, which
+             reads like deliberate configuration. Nothing in the suite catches it either — the
+             context smoke tests set spring.flyway.enabled=false on purpose.
+
+             Found when V26 would not apply to a live database. Same split as spring-boot-kafka. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
         <!-- SCALE-2 (ADR-064): opt in to the distributed EventBus, so core's KafkaEventBus activates
              when aiqaos.events.transport=kafka; default stays in-process.
 
