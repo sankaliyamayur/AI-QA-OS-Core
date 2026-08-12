@@ -1,5 +1,6 @@
 package com.aiqaos.orchestration.pipeline;
 
+import com.aiqaos.provider.exception.AllProvidersExhaustedException;
 import com.aiqaos.core.contract.WorkflowRequest;
 import com.aiqaos.core.contract.WorkflowResponse;
 import com.aiqaos.core.context.WorkflowContext;
@@ -335,6 +336,29 @@ public class AutonomousQAPipelineOrchestrator {
 
             if (stepFailed) {
                 counters[1]++;
+
+                // A provider exhaustion is fatal for the whole run, including inside ExecutionStep.
+                //
+                // ExecutionStep is otherwise allowed to fail and continue so BugAnalysisStep can
+                // diagnose it — a failing test is a legitimate result. Being unable to reach any AI
+                // provider is not a result; it means the run never happened. Letting it through the
+                // continue below would report SUCCESS for a pipeline that produced nothing, which is
+                // exactly the false-green outcome the provider-failover work exists to prevent.
+                //
+                // Matched on the message marker because steps catch Exception broadly and collapse
+                // it into a FAILED status, discarding the exception type before it reaches here.
+                if (AllProvidersExhaustedException.isExhaustion(stepResponse.getMessage())) {
+                    context.setStatus(WorkflowStatus.FAILED);
+                    finalResponse.setStatus("FAILED");
+                    finalResponse.setMessage("Step " + step.getName()
+                            + " failed: no AI provider could serve the request — " + stepResponse.getMessage());
+                    finalResponse.getOutputs().put("executionId", executionId);
+                    finalResponse.getOutputs().put("providerExhausted", true);
+                    workflowExecutionService.completeExecution(executionId, finalResponse, context,
+                            pipelineSteps.size(), counters[0], counters[1], counters[2], retryCounter[0]);
+                    return finalResponse;
+                }
+
                 // If ExecutionStep fails, we don't abort, we let BugAnalysisStep run (it will diagnose)
                 if ("ExecutionStep".equals(step.getName())) {
                     continue;

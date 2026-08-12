@@ -25,6 +25,15 @@
             <artifactId>ai-qa-os-agents</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Already on the classpath transitively via agents, declared explicitly because the
+             orchestrator now imports AllProvidersExhaustedException directly: a provider outage must
+             not be reported as a successful run. Relying on a transitive dependency for a compile-time
+             import breaks silently if agents ever stops exposing it. -->
+        <dependency>
+            <groupId>com.aiqaos</groupId>
+            <artifactId>ai-qa-os-ai-provider</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.aiqaos</groupId>
             <artifactId>ai-qa-os-execution</artifactId>
