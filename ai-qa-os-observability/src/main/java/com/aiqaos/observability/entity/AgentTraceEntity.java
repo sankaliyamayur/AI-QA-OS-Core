@@ -1,8 +1,8 @@
 package com.aiqaos.observability.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
@@ -15,10 +15,15 @@ public class AgentTraceEntity extends BaseEntity {
     private String provider;
     private String model;
 
-    @Lob
+    // V26: TEXT, not @Lob. Hibernate's PostgreSQL dialect maps @Lob String to a large object (oid),
+    // and a large object can only be read inside a transaction — so every read of these two columns
+    // failed with "Large Objects may not be used in auto-commit mode" while writes succeeded. They
+    // also outlive their row, leaking one object per column on delete. Same reasoning as
+    // PromptExecutionEntity.finalCompiledPrompt (V23), which is already TEXT.
+    @Column(name = "prompt", columnDefinition = "TEXT")
     private String prompt;
 
-    @Lob
+    @Column(name = "response", columnDefinition = "TEXT")
     private String response;
 
     private Long promptTokens;
