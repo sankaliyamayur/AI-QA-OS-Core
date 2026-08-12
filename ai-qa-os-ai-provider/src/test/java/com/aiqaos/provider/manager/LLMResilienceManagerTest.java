@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiqaos.provider.contract.LLMProvider;
 import com.aiqaos.provider.contract.ProviderCapability;
+import com.aiqaos.provider.exception.AllProvidersExhaustedException;
 import com.aiqaos.provider.exception.ProviderException;
 import com.aiqaos.provider.model.LLMRequest;
 import com.aiqaos.provider.model.LLMResponse;
@@ -45,11 +46,21 @@ class LLMResilienceManagerTest {
         assertThat(r.getText()).isEqualTo("F");
     }
 
+    /**
+     * The message changed with the failover chain: a spent chain now throws
+     * {@link AllProvidersExhaustedException} (still a {@link ProviderException}) carrying the
+     * {@code LLM_PROVIDERS_EXHAUSTED} marker and every attempt, instead of the old
+     * "Fallback provider failed as well". The marker is load-bearing — the orchestrator matches on it
+     * to refuse to report a run as successful when no provider could serve it.
+     */
     @Test
     void throwsProviderExceptionWhenBothFail() {
         assertThatThrownBy(() ->
                 manager.executeWithFallback(failing("primary"), failing("fallback"), new LLMRequest()))
                 .isInstanceOf(ProviderException.class)
-                .hasMessageContaining("Fallback provider failed");
+                .isInstanceOf(AllProvidersExhaustedException.class)
+                .hasMessageContaining(AllProvidersExhaustedException.MARKER)
+                .hasMessageContaining("primary")
+                .hasMessageContaining("fallback");
     }
 }

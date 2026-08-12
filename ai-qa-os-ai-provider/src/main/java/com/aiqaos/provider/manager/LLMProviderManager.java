@@ -6,7 +6,10 @@ import com.aiqaos.provider.cost.BudgetVerdict;
 import com.aiqaos.provider.cost.CostBudgetEnforcer;
 import com.aiqaos.provider.cost.CostTracker;
 import com.aiqaos.provider.cost.TokenBudgetEnforcer;
+import com.aiqaos.provider.config.ProviderChainProperties;
+import com.aiqaos.provider.exception.AllProvidersExhaustedException;
 import com.aiqaos.provider.exception.BudgetExceededException;
+import com.aiqaos.provider.exception.ProviderException;
 import com.aiqaos.provider.exception.TokenBudgetExceededException;
 import com.aiqaos.provider.model.LLMRequest;
 import org.slf4j.Logger;
@@ -46,6 +49,11 @@ public class LLMProviderManager {
     private final LLMMetricsCollector   metricsCollector;
     private final ObjectProvider<LlmSemanticCacheManager> promptCacheManagerProvider;
     private final ObjectProvider<SimulatorProvider> simulatorProviderSupplier;
+
+    // Failover chain + mode. Optional so the direct-construction test constructors keep working;
+    // a null here means the defaults apply, which are REAL mode and openai,claude,gemini,ollama.
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ProviderChainProperties chainProperties;
 
     public LLMProviderManager(OpenAIProvider openAIProvider,
                               ClaudeProvider claudeProvider,
@@ -135,15 +143,39 @@ public class LLMProviderManager {
             }
         }
 
-        String targetProviderName = modelRouter.routeModel(request.getPurpose());
+        // The failover chain, in configured priority order. In REAL mode the Simulator is not in it
+        // at all, so no provider failure can reach it (see ModelRouter.routeChain).
+        ProviderChainProperties props = chainProperties != null ? chainProperties : new ProviderChainProperties();
+        ModelRouter.Mode mode = props.resolvedMode() == ProviderChainProperties.Mode.SIMULATED
+                ? ModelRouter.Mode.SIMULATED
+                : ModelRouter.Mode.REAL;
 
-        LLMProvider primary = selectProvider(targetProviderName);
-        LLMProvider fallback = selectFallback(primary);
+        List<LLMProvider> chain = modelRouter.routeChain(request.getPurpose(), props.chainOrder(), mode);
 
-        LLMResponse response = resilienceManager.executeWithFallback(primary, fallback, request);
+        if (chain.isEmpty()) {
+            // Nothing available: no key on any provider, Ollama disabled, Simulator excluded.
+            // Fail loudly rather than silently degrade — that is the entire point of this path.
+            throw new AllProvidersExhaustedException(List.of());
+        }
 
-        // Record cost tracking & metrics observability metrics
-        costTracker.track(request, response, primary.getProviderName());
+        LLMResilienceManager.ChainResult result =
+                resilienceManager.executeChain(chain, request, props.isRetryOnRateLimit(), props.getRetryBackoffMillis());
+
+        LLMResponse response = result.response();
+        LLMProvider serving = result.servingProvider();
+
+        // Last line of defence: in REAL mode a Simulator response means the chain was mis-built.
+        // Rejecting here turns a wiring regression into a failure instead of a false green run.
+        if (mode == ModelRouter.Mode.REAL && ModelRouter.isSimulator(serving)) {
+            throw new ProviderException(
+                    "Simulator served a REAL-mode request — refusing to return a simulated result. "
+                            + "This indicates a provider-chain wiring fault.", null, 0, false);
+        }
+
+        // Attribute the response to the provider that ACTUALLY served it, not the one first chosen.
+        // Recording the intended provider is how agent_traces ended up with rows claiming
+        // provider='Gemini' against model='local-simulator-v1'.
+        costTracker.track(request, response, serving.getProviderName());
         metricsCollector.recordLLMCall(response.getModel(), response.getUsage().getInputTokens() + response.getUsage().getOutputTokens(), response.getLatencyMs());
 
         // Cache response for future semantically identical requests
