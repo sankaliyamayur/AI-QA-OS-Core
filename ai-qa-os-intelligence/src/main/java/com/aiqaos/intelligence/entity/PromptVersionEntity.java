@@ -3,7 +3,6 @@ package com.aiqaos.intelligence.entity;
 import com.aiqaos.core.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
@@ -17,8 +16,10 @@ public class PromptVersionEntity extends BaseEntity {
     @Column(name = "version_val", nullable = false)
     private String versionTag;
 
-    @Lob
-    @Column(name = "content", nullable = false)
+    // V27: TEXT, not @Lob — see V26/agent_traces. DbPromptSource READS this column, so an oid
+    // large object would fail with "Large Objects may not be used in auto-commit mode" on the
+    // first stored version; it also leaks one object per row on delete.
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "author")

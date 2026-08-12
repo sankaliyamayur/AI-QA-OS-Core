@@ -5,7 +5,6 @@ import com.aiqaos.core.tenant.Tenanted;
 import org.hibernate.annotations.TenantId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
@@ -25,12 +24,12 @@ public class AgentExecutionEntity extends BaseEntity implements Tenanted {
     @Column(name = "agent_id", nullable = false)
     private UUID agentId;
 
-    @Lob
-    @Column(name = "request_payload", nullable = false)
+    // V27: TEXT, not @Lob — see V26/agent_traces. Dormant (no callers, table empty); converted so
+    // the first component to use this repository does not inherit the leak and the read failure.
+    @Column(name = "request_payload", nullable = false, columnDefinition = "TEXT")
     private String request;
 
-    @Lob
-    @Column(name = "response_payload", nullable = false)
+    @Column(name = "response_payload", nullable = false, columnDefinition = "TEXT")
     private String response;
 
     @Column(name = "status", nullable = false)

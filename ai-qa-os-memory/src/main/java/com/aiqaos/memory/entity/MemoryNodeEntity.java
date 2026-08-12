@@ -20,8 +20,9 @@ public class MemoryNodeEntity extends BaseEntity implements Tenanted {
     public String getTenantId() { return tenantId; }
     public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
-    @Lob
-    @Column(name = "content", nullable = false)
+    // V27: TEXT, not @Lob — see V26/agent_traces. Write-only today, but an oid large object
+    // outlives its row, so long-lived memory nodes would accumulate orphans on delete.
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "memory_type", nullable = false)

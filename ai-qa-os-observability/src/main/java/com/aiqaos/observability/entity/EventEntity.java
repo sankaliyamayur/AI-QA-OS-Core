@@ -1,8 +1,8 @@
 package com.aiqaos.observability.entity;
 
 import com.aiqaos.core.entity.BaseEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
@@ -11,8 +11,12 @@ import java.time.LocalDateTime;
 public class EventEntity extends BaseEntity {
     private String eventType;
     private String source;
-    
-    @Lob
+
+    // V27: TEXT, not @Lob. Hibernate's PostgreSQL dialect maps @Lob String to a large object (oid),
+    // which outlives its row — every event leaked one on delete. Nothing reads payload today, so it
+    // never hit the auto-commit failure that took down agent_traces (V26), but it would the moment a
+    // read was added. Same reasoning as PromptExecutionEntity.finalCompiledPrompt (V23).
+    @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
     private LocalDateTime createdAt;
 
