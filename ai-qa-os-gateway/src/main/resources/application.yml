@@ -40,6 +40,12 @@ security:
   jwt:
     secret: ${JWT_SECRET:}
 
+qa:
+  max-tokens:
+    qa-analysis: 4096
+    test-case-generation: 4096
+    script-generation: 8192
+
 aiqaos:
   provider:
     gemini:

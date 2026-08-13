@@ -4,7 +4,7 @@ public class LLMRequest {
     private String prompt;
     private String systemPrompt;
     private double temperature = 0.7;
-    private int maxTokens = 2048;
+    private int maxTokens = 0;
     private String correlationId;
     private String agentType;
     private String purpose;

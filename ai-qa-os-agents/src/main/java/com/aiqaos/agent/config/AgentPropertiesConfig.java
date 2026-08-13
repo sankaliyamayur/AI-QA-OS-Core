@@ -10,7 +10,11 @@ import java.util.Map;
 public class AgentPropertiesConfig {
 
     private Map<String, String> prompts = new HashMap<>();
+    private Map<String, Integer> maxTokens = new HashMap<>();
 
     public Map<String, String> getPrompts() { return prompts; }
     public void setPrompts(Map<String, String> prompts) { this.prompts = prompts; }
+
+    public Map<String, Integer> getMaxTokens() { return maxTokens; }
+    public void setMaxTokens(Map<String, Integer> maxTokens) { this.maxTokens = maxTokens; }
 }

@@ -89,7 +89,7 @@ public class OpenAIProvider implements LLMProvider, StreamingLLMProvider {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", DEFAULT_MODEL);
         body.put("temperature", request.getTemperature());
-        body.put("max_tokens", request.getMaxTokens());
+        body.put("max_tokens", request.getMaxTokens() > 0 ? request.getMaxTokens() : 2048);
         body.putObject("response_format").put("type", "json_object");
 
         ArrayNode messages = body.putArray("messages");

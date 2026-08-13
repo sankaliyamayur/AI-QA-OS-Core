@@ -26,6 +26,9 @@ public class TestCaseGeneratorAgent implements Agent<AgentRequest, AgentResponse
     @Autowired
     private LLMProviderManager providerManager;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.config.AgentPropertiesConfig agentPropertiesConfig;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -48,6 +51,13 @@ public class TestCaseGeneratorAgent implements Agent<AgentRequest, AgentResponse
             llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Test Designer Agent.");
             llmReq.setPurpose("TEST_CASE_GENERATION");
             llmReq.setAgentType("TEST_CASE_GENERATOR");
+
+            int tokenBudget = 4096;
+            if (agentPropertiesConfig != null && agentPropertiesConfig.getMaxTokens() != null) {
+                tokenBudget = agentPropertiesConfig.getMaxTokens().getOrDefault("test-case-generation", 4096);
+            }
+            llmReq.setMaxTokens(tokenBudget);
+
             if (request.getMetadata() != null && request.getMetadata().getCorrelationId() != null) {
                 llmReq.setCorrelationId(request.getMetadata().getCorrelationId().toString());
             }

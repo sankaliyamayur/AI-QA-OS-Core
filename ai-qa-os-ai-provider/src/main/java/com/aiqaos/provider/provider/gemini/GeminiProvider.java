@@ -20,12 +20,17 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 
 @Component
 public class GeminiProvider implements LLMProvider, StreamingLLMProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiProvider.class);
 
     private static final String GENERATE_CONTENT_URL_TEMPLATE =
         "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
@@ -119,7 +124,8 @@ public class GeminiProvider implements LLMProvider, StreamingLLMProvider {
 
         ObjectNode generationConfig = body.putObject("generationConfig");
         generationConfig.put("temperature", request.getTemperature());
-        generationConfig.put("maxOutputTokens", Math.max(request.getMaxTokens(), maxOutputTokens));
+        int effectiveMaxTokens = request.getMaxTokens() > 0 ? request.getMaxTokens() : maxOutputTokens;
+        generationConfig.put("maxOutputTokens", effectiveMaxTokens);
         generationConfig.put("responseMimeType", "application/json");
         generationConfig.putObject("thinkingConfig").put("thinkingBudget", thinkingBudget);
 
@@ -137,7 +143,22 @@ public class GeminiProvider implements LLMProvider, StreamingLLMProvider {
             .body(JsonNode.class);
         long duration = System.currentTimeMillis() - start;
 
-        String content = responseBody.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText();
+        JsonNode candidates = responseBody != null ? responseBody.path("candidates") : null;
+        if (candidates == null || !candidates.isArray() || candidates.isEmpty()) {
+            throw new ProviderException("Gemini API returned no candidates in response");
+        }
+
+        JsonNode candidate = candidates.get(0);
+        String finishReason = candidate.path("finishReason").asText("");
+        log.info("Gemini response candidate finishReason='{}'", finishReason);
+        if ("MAX_TOKENS".equalsIgnoreCase(finishReason) || "LENGTH".equalsIgnoreCase(finishReason) || "REASONING_LENGTH".equalsIgnoreCase(finishReason)) {
+            throw new ProviderException("Gemini output truncated: finishReason=" + finishReason);
+        }
+        if ("SAFETY".equalsIgnoreCase(finishReason) || "RECITATION".equalsIgnoreCase(finishReason)) {
+            throw new ProviderException("Gemini generation blocked: finishReason=" + finishReason);
+        }
+
+        String content = candidate.path("content").path("parts").path(0).path("text").asText();
         long promptTokens = responseBody.path("usageMetadata").path("promptTokenCount").asLong(0);
         long completionTokens = responseBody.path("usageMetadata").path("candidatesTokenCount").asLong(0);
         String respondingModel = responseBody.path("modelVersion").asText(model);

@@ -26,6 +26,9 @@ public class ScriptGeneratorAgent implements Agent<AgentRequest, AgentResponse> 
     @Autowired
     private LLMProviderManager providerManager;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.config.AgentPropertiesConfig agentPropertiesConfig;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -48,6 +51,13 @@ public class ScriptGeneratorAgent implements Agent<AgentRequest, AgentResponse> 
             llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Automation Script Generator Agent.");
             llmReq.setPurpose("SCRIPT_GENERATION");
             llmReq.setAgentType("SCRIPT_GENERATOR");
+
+            int tokenBudget = 8192;
+            if (agentPropertiesConfig != null && agentPropertiesConfig.getMaxTokens() != null) {
+                tokenBudget = agentPropertiesConfig.getMaxTokens().getOrDefault("script-generation", 8192);
+            }
+            llmReq.setMaxTokens(tokenBudget);
+
             if (request.getMetadata() != null && request.getMetadata().getCorrelationId() != null) {
                 llmReq.setCorrelationId(request.getMetadata().getCorrelationId().toString());
             }

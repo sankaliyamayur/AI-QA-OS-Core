@@ -54,7 +54,7 @@ class ClaudeProviderTest {
                 .andExpect(header("x-api-key", "sk-test"))
                 .andExpect(header("anthropic-version", "2023-06-01"))
                 .andExpect(jsonPath("$.model").value("claude-3-5-sonnet-latest"))
-                .andExpect(jsonPath("$.max_tokens").value(2048))   // LLMRequest default maxTokens
+                .andExpect(jsonPath("$.max_tokens").value(4096))   // ClaudeProvider DEFAULT_MAX_TOKENS default
                 .andExpect(jsonPath("$.messages[0].role").value("user"))
                 .andExpect(jsonPath("$.messages[0].content").value("hi"))
                 .andRespond(withSuccess(

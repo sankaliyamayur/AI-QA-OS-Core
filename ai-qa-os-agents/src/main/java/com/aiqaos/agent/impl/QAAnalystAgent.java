@@ -104,6 +104,11 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
                 llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Analyst Agent.");
                 llmReq.setPurpose("QA_ANALYSIS");
                 llmReq.setAgentType("QA_ENGINEER");
+                int tokenBudget = 4096;
+                if (agentPropertiesConfig != null && agentPropertiesConfig.getMaxTokens() != null) {
+                    tokenBudget = agentPropertiesConfig.getMaxTokens().getOrDefault("qa-analysis", 4096);
+                }
+                llmReq.setMaxTokens(tokenBudget);
                 
                 // Rich Metadata injection mapping
                 if (request.getMetadata() != null) {
