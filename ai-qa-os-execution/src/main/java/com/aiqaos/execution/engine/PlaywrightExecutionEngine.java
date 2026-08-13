@@ -457,18 +457,26 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
         }
     }
 
-    /** Writes the generated scripts from the GeneratedScriptSuite into the tests/ directory. */
-    private void writeScriptFiles(String scriptPath, GeneratedScriptSuite scriptSuite) {
-        if (scriptSuite == null || scriptSuite.getScripts() == null || scriptSuite.getScripts().isEmpty()) {
-            log.warn("[Playwright] Script suite is empty. No test spec files to write.");
-            return;
-        }
-
+    /**
+     * Writes the generated scripts from the GeneratedScriptSuite into the tests/ directory.
+     *
+     * <p>The directory is cleaned <b>before</b> the empty-suite check, not after. It used to return
+     * early when the suite was empty, leaving the previous run's {@code .spec} files in place — so
+     * Playwright ran those and their results were reported as this run's. A live run "passed 2 tests"
+     * that had been written six hours earlier by an unrelated run while generating nothing itself.
+     *
+     * <p>Cleaning unconditionally means an empty suite leaves an empty tests directory, and Playwright
+     * exits non-zero with "no tests found" — a loud failure rather than a borrowed pass. That is the
+     * point: the only safe thing to execute is what this run produced.
+     */
+    // Package-private as a test seam: the only public route in is execute(), which shells out to
+    // PowerShell and a real browser, so the stale-directory behaviour is untestable through it.
+    void writeScriptFiles(String scriptPath, GeneratedScriptSuite scriptSuite) {
         try {
             Path scriptsDir = Paths.get(scriptPath).getParent();
             Path testsDir   = scriptsDir.resolve("tests");
 
-            // Clean and recreate the tests directory
+            // Clean and recreate the tests directory. Unconditional — see the note above.
             if (Files.exists(testsDir)) {
                 try (var stream = Files.walk(testsDir)) {
                     stream.sorted(java.util.Comparator.reverseOrder())
@@ -482,6 +490,13 @@ public class PlaywrightExecutionEngine implements ExecutionEngine {
                 }
             }
             Files.createDirectories(testsDir);
+
+            if (scriptSuite == null || scriptSuite.getScripts() == null || scriptSuite.getScripts().isEmpty()) {
+                log.warn("[Playwright] Script suite is empty — tests directory cleared, nothing to write. "
+                        + "Playwright will find no tests and fail, which is correct: a previous run's "
+                        + "specs must never be reported as this run's results.");
+                return;
+            }
 
             // Write each script as a separate spec file
             for (AutomationScript script : scriptSuite.getScripts()) {
