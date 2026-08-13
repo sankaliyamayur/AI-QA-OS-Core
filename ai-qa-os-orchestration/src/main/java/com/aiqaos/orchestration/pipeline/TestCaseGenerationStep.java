@@ -83,6 +83,16 @@ public class TestCaseGenerationStep implements WorkflowStep<WorkflowRequest, Wor
 
             // 4. Deserialize and store suite
             GeneratedTestCaseSuite tcSuite = objectMapper.readValue(normalizedJson, GeneratedTestCaseSuite.class);
+
+            if (tcSuite.getTestCases() == null || tcSuite.getTestCases().isEmpty()) {
+                response.setStatus("FAILED");
+                response.setMessage("Failed in TestCaseGenerationStep: the agent returned no test cases for "
+                        + "this requirement. Refusing to continue, because ScriptGeneration and Execution "
+                        + "would then run against an empty suite. Common cause: the provider call failed or "
+                        + "was rate-limited and returned no usable content.");
+                return response;
+            }
+
             context.getQaWorkflowState().setGeneratedTestCaseSuite(tcSuite);
             
             // Save generated test cases to the database so they appear in the UI
