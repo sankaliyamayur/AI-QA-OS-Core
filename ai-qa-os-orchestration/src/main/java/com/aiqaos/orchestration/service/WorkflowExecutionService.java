@@ -103,7 +103,11 @@ public class WorkflowExecutionService {
             entity.setDuration(java.time.Duration.between(entity.getStartTime(), endTime).toMillis());
         }
         entity.setStatus(response.getStatus());
-        entity.setResult(response.getMessage());
+        String resultMsg = response.getMessage();
+        if (resultMsg != null && resultMsg.length() > 255) {
+            resultMsg = resultMsg.substring(0, 252) + "...";
+        }
+        entity.setResult(resultMsg);
         entity.setTotalSteps(totalSteps);
         entity.setSuccessSteps(successSteps);
         entity.setFailedSteps(failedSteps);

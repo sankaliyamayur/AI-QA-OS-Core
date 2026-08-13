@@ -53,14 +53,27 @@ public class LLMResponseValidator {
         try {
             String cleanedJson = rawJson.trim();
             if (cleanedJson.startsWith("```")) {
-                cleanedJson = cleanedJson.substring(cleanedJson.indexOf("\n") + 1);
-                if (cleanedJson.endsWith("```")) {
-                    cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
+                int firstNewline = cleanedJson.indexOf('\n');
+                if (firstNewline != -1) {
+                    cleanedJson = cleanedJson.substring(firstNewline + 1);
+                } else {
+                    cleanedJson = cleanedJson.substring(3);
                 }
                 cleanedJson = cleanedJson.trim();
             }
+            if (cleanedJson.endsWith("```")) {
+                cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3).trim();
+            }
 
-            JsonNode root = objectMapper.readTree(cleanedJson);
+            JsonNode root;
+            try {
+                root = objectMapper.readTree(cleanedJson);
+            } catch (Exception e) {
+                log.error("JSON parse failure. cleanedJson (first 300 chars): '{}', (last 300 chars): '{}'",
+                    cleanedJson.length() > 300 ? cleanedJson.substring(0, 300) : cleanedJson,
+                    cleanedJson.length() > 300 ? cleanedJson.substring(cleanedJson.length() - 300) : cleanedJson);
+                throw e;
+            }
 
             if (type == AgentType.TEST_CASE_GENERATOR) {
                 if (!(root instanceof ObjectNode)) {
