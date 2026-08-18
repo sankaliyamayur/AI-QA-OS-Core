@@ -34,12 +34,16 @@ public class RequirementReaderStep implements WorkflowStep<WorkflowRequest, Work
             if (context.getVariables() != null && context.getVariables().containsKey("storyPath")) {
                 storyPath = (String) context.getVariables().get("storyPath");
             }
-            if (storyPath == null && request != null && request.getInputs() != null && request.getInputs().containsKey("storyPath")) {
-                storyPath = (String) request.getInputs().get("storyPath");
+            if (storyPath == null && request != null && request.getInputs() != null) {
+                if (request.getInputs().containsKey("storyPath")) {
+                    storyPath = (String) request.getInputs().get("storyPath");
+                } else if (request.getInputs().containsKey("requirementPath")) {
+                    storyPath = (String) request.getInputs().get("requirementPath");
+                }
             }
 
             if (storyPath == null || storyPath.trim().isEmpty()) {
-                throw new IllegalArgumentException("storyPath input is missing from request or variables");
+                throw new IllegalArgumentException("storyPath or requirementPath input is missing from request or variables");
             }
 
             String content = reader.readRequirement(storyPath);
