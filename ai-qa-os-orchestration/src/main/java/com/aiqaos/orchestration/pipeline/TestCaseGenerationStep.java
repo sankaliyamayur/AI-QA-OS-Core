@@ -151,6 +151,7 @@ public class TestCaseGenerationStep implements WorkflowStep<WorkflowRequest, Wor
             response.setStatus("SUCCESS");
             response.setMessage("Successfully generated test case suite");
         } catch (Exception e) {
+            log.error("[TestCaseGenerationStep] Failed: {}", e.getMessage(), e);
             response.setStatus("FAILED");
             response.setMessage("Failed in TestCaseGenerationStep: " + e.getMessage());
         }

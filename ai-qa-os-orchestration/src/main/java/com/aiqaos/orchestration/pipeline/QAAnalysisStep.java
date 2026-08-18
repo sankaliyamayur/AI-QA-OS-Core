@@ -27,6 +27,8 @@ public class QAAnalysisStep implements WorkflowStep<WorkflowRequest, WorkflowRes
     @Autowired
     private ObjectMapper objectMapper;
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(QAAnalysisStep.class);
+
     @Override
     public String getName() {
         return "QAAnalysisStep";
@@ -63,9 +65,6 @@ public class QAAnalysisStep implements WorkflowStep<WorkflowRequest, WorkflowRes
             response.setConfidence(agentRes.getConfidenceScore()); // AI-1: surface confidence to the gate
 
             // 3. Parse and convert output
-            // The analysis must come from the agent — never substituted with canned scenarios,
-            // otherwise the whole downstream suite is generated from data nobody produced.
-            // Tolerate extra fields the model may add, but never invent the analysis itself.
             QAAnalysisResult analysisResult = objectMapper
                 .readerFor(QAAnalysisResult.class)
                 .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -79,6 +78,7 @@ public class QAAnalysisStep implements WorkflowStep<WorkflowRequest, WorkflowRes
             response.setStatus("SUCCESS");
             response.setMessage("Successfully completed QA Analysis via QAAnalystAgent");
         } catch (Exception e) {
+            log.error("[QAAnalysisStep] Failed: {}", e.getMessage(), e);
             response.setStatus("FAILED");
             response.setMessage("Failed in QAAnalysisStep: " + e.getMessage());
         }

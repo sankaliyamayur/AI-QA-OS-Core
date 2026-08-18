@@ -26,6 +26,8 @@ public class RequirementReaderStep implements WorkflowStep<WorkflowRequest, Work
         return "RequirementReaderStep";
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RequirementReaderStep.class);
+
     @Override
     public WorkflowResponse execute(WorkflowRequest request, WorkflowContext context) {
         WorkflowResponse response = new WorkflowResponse();
@@ -46,6 +48,7 @@ public class RequirementReaderStep implements WorkflowStep<WorkflowRequest, Work
                 throw new IllegalArgumentException("storyPath or requirementPath input is missing from request or variables");
             }
 
+            log.info("[RequirementReaderStep] Reading requirement story from path: {}", storyPath);
             String content = reader.readRequirement(storyPath);
             RequirementContext reqContext = parser.parse(content);
 
@@ -60,7 +63,9 @@ public class RequirementReaderStep implements WorkflowStep<WorkflowRequest, Work
 
             response.setStatus("SUCCESS");
             response.setMessage("Successfully read and parsed user story");
+            log.info("[RequirementReaderStep] Requirement parsed successfully for title: {}", reqContext.getTitle());
         } catch (Exception e) {
+            log.error("[RequirementReaderStep] Failed to read or parse requirement: {}", e.getMessage(), e);
             context.setStatus(WorkflowStatus.FAILED);
             response.setStatus("FAILED");
             response.setMessage("Failed in RequirementReaderStep: " + e.getMessage());

@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 @SuppressWarnings("unchecked")
 public class ScriptGenerationStep implements WorkflowStep<WorkflowRequest, WorkflowResponse> {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ScriptGenerationStep.class);
+
     @Autowired
     private AgentManager agentManager;
 
@@ -106,6 +108,7 @@ public class ScriptGenerationStep implements WorkflowStep<WorkflowRequest, Workf
             response.setMessage("Successfully generated automation scripts ("
                     + masterSuite.getScripts().size() + ")");
         } catch (Exception e) {
+            log.error("[ScriptGenerationStep] Failed: {}", e.getMessage(), e);
             response.setStatus("FAILED");
             response.setMessage("Failed in ScriptGenerationStep: " + e.getMessage());
         }
