@@ -15,7 +15,18 @@ public class RequirementReader {
         }
         Path path = Paths.get(filePath);
         if (!Files.exists(path)) {
-            throw new IOException("Requirement file not found at path: " + filePath);
+            // Try resolving relative to parent directory (root workspace)
+            Path parentPath = Paths.get("..", filePath);
+            if (Files.exists(parentPath)) {
+                path = parentPath;
+            } else {
+                Path userDirParent = Paths.get(System.getProperty("user.dir")).getParent();
+                if (userDirParent != null && Files.exists(userDirParent.resolve(filePath))) {
+                    path = userDirParent.resolve(filePath);
+                } else {
+                    throw new IOException("Requirement file not found at path: " + filePath);
+                }
+            }
         }
         return Files.readString(path);
     }
