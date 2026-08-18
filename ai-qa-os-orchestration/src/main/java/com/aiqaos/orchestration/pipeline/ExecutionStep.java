@@ -41,6 +41,9 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
     @Autowired
     private com.aiqaos.core.repository.TestCaseRepository testCaseRepo;
 
+    @Autowired(required = false)
+    private com.aiqaos.core.repository.ModuleRepository moduleRepo;
+
     // SCALE-1: when a job queue is wired (aiqaos.execution.queue.enabled=true), execution runs on a
     // decoupled worker pool; when absent (default) the in-process engine path below is used unchanged.
     @Autowired(required = false)
@@ -276,6 +279,14 @@ public class ExecutionStep implements WorkflowStep<WorkflowRequest, WorkflowResp
                                 
                                 testCaseRepo.save(tc);
                                 log.info("[ExecutionStep] Updated TestCaseEntity {} with status {} and run time", tc.getId(), tc.getStatus());
+
+                                if (moduleRepo != null && tc.getModuleId() != null) {
+                                    moduleRepo.findById(tc.getModuleId()).ifPresent(mod -> {
+                                        mod.setLastRun(java.time.LocalDateTime.now());
+                                        moduleRepo.save(mod);
+                                        log.info("[ExecutionStep] Updated ModuleEntity {} lastRun timestamp", mod.getId());
+                                    });
+                                }
                             });
                         } catch (Exception e) {
                             log.error("[ExecutionStep] Failed to update TestCaseEntity {}: {}", art.getTestCaseId(), e.getMessage());
