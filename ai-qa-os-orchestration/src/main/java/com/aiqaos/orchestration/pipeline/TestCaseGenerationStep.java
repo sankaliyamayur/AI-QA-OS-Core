@@ -27,6 +27,8 @@ import org.springframework.stereotype.Component;
 @SuppressWarnings("unchecked")
 public class TestCaseGenerationStep implements WorkflowStep<WorkflowRequest, WorkflowResponse> {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TestCaseGenerationStep.class);
+
     @Autowired
     private AgentManager agentManager;
 
@@ -187,8 +189,8 @@ public class TestCaseGenerationStep implements WorkflowStep<WorkflowRequest, Wor
 
         // Auto-register module if not found in database yet
         String generatedId = "mod-" + java.util.UUID.randomUUID().toString().substring(0, 8);
-        String moduleName = reqContext != null && reqContext.getModuleName() != null && !reqContext.getModuleName().isEmpty()
-                ? reqContext.getModuleName()
+        String moduleName = reqContext != null && reqContext.getTitle() != null && !reqContext.getTitle().isEmpty()
+                ? reqContext.getTitle()
                 : deriveModuleNameFromPath(storyPath);
 
         com.aiqaos.core.entity.ModuleEntity newModule = new com.aiqaos.core.entity.ModuleEntity();
