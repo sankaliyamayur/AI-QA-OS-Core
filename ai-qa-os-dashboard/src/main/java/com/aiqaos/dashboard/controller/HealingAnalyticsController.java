@@ -28,7 +28,10 @@ public class HealingAnalyticsController {
     }
 
     @GetMapping
-    public List<HealingMetricDTO> getByExecutionId(@RequestParam("executionId") UUID executionId) {
+    public List<HealingMetricDTO> getByExecutionId(@RequestParam(value = "executionId", required = false) UUID executionId) {
+        if (executionId == null) {
+            return List.of();
+        }
         return healingAnalyticsService.getByExecutionId(executionId);
     }
 

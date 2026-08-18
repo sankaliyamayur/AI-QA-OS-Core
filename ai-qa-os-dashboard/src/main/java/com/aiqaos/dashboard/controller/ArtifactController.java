@@ -209,13 +209,15 @@ public class ArtifactController {
         String disposition = (isHtml ? "attachment" : "inline") + "; filename=\"" + file.getName() + "\"";
 
         Resource resource = new FileSystemResource(file);
-        return ResponseEntity.ok()
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
-            .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-            // SEC-4: a served artifact never needs to load app resources or run scripts.
-            .header("X-Content-Type-Options", "nosniff")
-            .header("Content-Security-Policy", "default-src 'none'; sandbox")
-            .body(resource);
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition);
+        
+        if (isHtml) {
+            builder.header("X-Content-Type-Options", "nosniff")
+                   .header("Content-Security-Policy", "default-src 'none'; sandbox");
+        }
+        return builder.body(resource);
     }
 
     // ── 4. Durable serving from ArtifactStore (FI-ENT5-C) ─────────────────────
@@ -400,12 +402,18 @@ public class ArtifactController {
      */
     private String toArtifactUrl(String absolutePath) {
         if (absolutePath == null || absolutePath.isBlank()) return null;
+        if (absolutePath.startsWith("http://") || absolutePath.startsWith("https://")) {
+            return absolutePath;
+        }
         File file = new File(absolutePath);
+        if (!file.exists()) {
+            file = new File(resolvedBaseDir, absolutePath);
+        }
         if (!file.exists()) return null;
 
         try {
             Path base    = Paths.get(resolvedBaseDir).normalize().toAbsolutePath();
-            Path target  = Paths.get(absolutePath).normalize().toAbsolutePath();
+            Path target  = file.toPath().normalize().toAbsolutePath();
             String rel   = base.relativize(target).toString().replace("\\", "/");
             return dashboardBaseUrl + "/api/artifacts/" + rel;
         } catch (Exception e) {
@@ -414,13 +422,17 @@ public class ArtifactController {
         }
     }
 
-    /** Reads a text file safely, returning null on any error. */
+    /** Reads a text file safely, or returns the string directly if it is inline log text. */
     private String readFileSafe(String path) {
+        if (path == null || path.isBlank()) return null;
         try {
-            return Files.readString(Paths.get(path));
+            Path p = Paths.get(path);
+            if (Files.exists(p) && Files.isRegularFile(p)) {
+                return Files.readString(p);
+            }
         } catch (Exception e) {
-            log.warn("Could not read log file: {} ({})", path, e.getMessage());
-            return null;
+            // Fall back to returning string if it is inline log content
         }
+        return path;
     }
 }

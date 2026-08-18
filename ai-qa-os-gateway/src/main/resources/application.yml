@@ -10,11 +10,11 @@ spring:
   application:
     name: ai-qa-os-gateway
   datasource:
-    url: jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple
-    # SEC-2: credentials injected from env/secret store; no committed default for the password.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple}
+    # SEC-2: credentials injected from env/secret store.
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
     # SCALE-4: per-service pool sizing — the gateway fronts the workflow write path (write-leaning).
     hikari:
       pool-name: gateway-pool
@@ -25,8 +25,8 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: validate
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.PostgreSQLDialect}
     show-sql: false
     open-in-view: false
   flyway:

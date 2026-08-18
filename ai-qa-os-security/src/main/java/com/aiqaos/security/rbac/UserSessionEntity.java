@@ -46,7 +46,7 @@ public class UserSessionEntity extends BaseEntity implements Tenanted {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
-    @Column(name = "refresh_token")
+    @Column(name = "refresh_token", length = 1024)
     private String refreshToken;
 
     public UUID getSessionId() { return sessionId; }

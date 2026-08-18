@@ -11,3 +11,7 @@ scratch/
 test-*.ps1
 # ORG-1: never commit vendored Node deps — restored on demand via `npm ci` (package-lock.json)
 node_modules/
+data/
+*.mv.db
+*.trace.db
+
