@@ -51,15 +51,47 @@ public class DevDataInitializer implements CommandLineRunner {
 
             ModuleEntity authModule = new ModuleEntity();
             authModule.setId("authentication");
-            authModule.setName("Authentication");
-            authModule.setDescription("Role-based authentication module. Contains all login and access control user stories.");
-            authModule.setRequirementPath("resources/user-stories/Login/US-001.md");
+            authModule.setName("Project 1 - Authentication");
+            authModule.setDescription("Role-based authentication module for OnePurpos application.");
+            authModule.setRequirementPath("resources/user-stories/Project_1_OnePurpos/Login/US-001.md");
             authModule.setTotalTestCases(14);
             authModule.setPassRate(93);
             authModule.setLastRun(LocalDateTime.now());
             moduleRepository.save(authModule);
 
+            ModuleEntity ecomModule = new ModuleEntity();
+            ecomModule.setId("ecommerce-checkout");
+            ecomModule.setName("Project 2 - E-Commerce Store");
+            ecomModule.setDescription("Storefront authentication, cart management, and checkout pipeline.");
+            ecomModule.setRequirementPath("resources/user-stories/Project_2_ECommerce/Auth/US-010.md");
+            ecomModule.setTotalTestCases(5);
+            ecomModule.setPassRate(100);
+            ecomModule.setLastRun(LocalDateTime.now());
+            moduleRepository.save(ecomModule);
+
+            ModuleEntity crmModule = new ModuleEntity();
+            crmModule.setId("crm-lead-mgmt");
+            crmModule.setName("Project 3 - Admin CRM");
+            crmModule.setDescription("Enterprise lead pipeline, opportunity qualification, and deal management.");
+            crmModule.setRequirementPath("resources/user-stories/Project_3_CRM/LeadManagement/US-001.md");
+            crmModule.setTotalTestCases(4);
+            crmModule.setPassRate(100);
+            crmModule.setLastRun(LocalDateTime.now());
+            moduleRepository.save(crmModule);
+
             List<TestCaseEntity> testCases = new ArrayList<>();
+
+            // Seed Project 2 test cases
+            testCases.add(createTestCase("TC-ECOM-001", "ecommerce-checkout", "AC-010-1: Storefront loads header and cart",
+                    "Given the customer opens the E-Commerce Store URL, When storefront loads, Then header logo and cart badge should be visible.",
+                    "Customer Login & Cart Access", "High", "Passed", "Chromium", "2 sec",
+                    List.of(Map.of("stepNumber", 1, "action", "Navigate to https://staging.ecommerce.com", "status", "Passed", "duration", "1.2 sec")), null, null, null));
+
+            // Seed Project 3 test cases
+            testCases.add(createTestCase("TC-CRM-001", "crm-lead-mgmt", "AC-CRM-001: Leads dashboard matrix loads",
+                    "Given Sales Manager logs in to Enterprise CRM portal, When navigating to Leads Dashboard, Then active deals matrix should load.",
+                    "Lead Capture & Deal Assignment", "High", "Passed", "Firefox", "3 sec",
+                    List.of(Map.of("stepNumber", 1, "action", "Navigate to https://admin.crm.app", "status", "Passed", "duration", "1.5 sec")), null, null, null));
 
             testCases.add(createTestCase("TC-AUTH-001", "authentication", "AC-001: Open application URL successfully",
                     "Given the user opens the OnePurpos application URL, When the application loads, Then the OnePurpos Openings page should open successfully.",
