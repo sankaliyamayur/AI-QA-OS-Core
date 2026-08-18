@@ -178,14 +178,39 @@ public class TestCaseGenerationStep implements WorkflowStep<WorkflowRequest, Wor
             if (requirementPath == null || requirementPath.trim().isEmpty()) {
                 continue;
             }
-            // The workflow is started with an absolute path while modules store a
-            // repository-relative one, so compare on the shared trailing segment.
-            if (normalized.endsWith(normalizePath(requirementPath))) {
+            String normReq = normalizePath(requirementPath);
+            if (normalized.endsWith(normReq) || normReq.endsWith(normalized) || normalized.contains(normReq) || normReq.contains(normalized)) {
                 return module.getId();
             }
         }
 
-        throw new IllegalStateException("No module registered for requirement path: " + storyPath);
+        // Auto-register module if not found in database yet
+        String generatedId = "mod-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        String moduleName = reqContext != null && reqContext.getModuleName() != null && !reqContext.getModuleName().isEmpty()
+                ? reqContext.getModuleName()
+                : deriveModuleNameFromPath(storyPath);
+
+        com.aiqaos.core.entity.ModuleEntity newModule = new com.aiqaos.core.entity.ModuleEntity();
+        newModule.setId(generatedId);
+        newModule.setName(moduleName);
+        newModule.setDescription("Auto-registered module for requirement: " + storyPath);
+        newModule.setRequirementPath(storyPath);
+        newModule.setTotalTestCases(0);
+        newModule.setPassRate(0);
+        newModule.setLastRun(java.time.LocalDateTime.now());
+        moduleRepo.save(newModule);
+
+        return generatedId;
+    }
+
+    private String deriveModuleNameFromPath(String path) {
+        String clean = normalizePath(path);
+        String[] parts = clean.split("/");
+        if (parts.length >= 2) {
+            String parent = parts[parts.length - 2];
+            return parent.substring(0, 1).toUpperCase() + parent.substring(1);
+        }
+        return "Module-" + parts[parts.length - 1];
     }
 
     private String normalizePath(String path) {
