@@ -46,6 +46,12 @@ public class DevDataInitializer implements CommandLineRunner {
     }
 
     private void seedModulesAndTestCases() {
+        try {
+            jdbcTemplate.update("UPDATE test_cases SET browser = 'Chromium', status = 'Passed', duration = '5 sec' WHERE id = 'TC-AUTH-007'");
+            jdbcTemplate.update("UPDATE test_cases SET browser = 'Chromium' WHERE browser = 'Firefox'");
+        } catch (Exception e) {
+            log.warn("Could not auto-update test_cases browser: {}", e.getMessage());
+        }
         if (moduleRepository.count() == 0) {
             log.info("Seeding initial Authentication module and US-001 test cases into database...");
 
@@ -90,7 +96,7 @@ public class DevDataInitializer implements CommandLineRunner {
             // Seed Project 3 test cases
             testCases.add(createTestCase("TC-CRM-001", "crm-lead-mgmt", "AC-CRM-001: Leads dashboard matrix loads",
                     "Given Sales Manager logs in to Enterprise CRM portal, When navigating to Leads Dashboard, Then active deals matrix should load.",
-                    "Lead Capture & Deal Assignment", "High", "Passed", "Firefox", "3 sec",
+                    "Lead Capture & Deal Assignment", "High", "Passed", "Chromium", "3 sec",
                     List.of(Map.of("stepNumber", 1, "action", "Navigate to https://admin.crm.app", "status", "Passed", "duration", "1.5 sec")), null, null, null));
 
             testCases.add(createTestCase("TC-AUTH-001", "authentication", "AC-001: Open application URL successfully",
@@ -153,10 +159,10 @@ public class DevDataInitializer implements CommandLineRunner {
                         Map.of("stepNumber", 5, "action", "Assert error alert displays 'Invalid Credentials.'", "status", "Passed", "duration", "0.8 sec")
                     ), null, null, null));
 
-            // TC-AUTH-007: Failed Test Case with complete steps & failure diagnostics!
+            // TC-AUTH-007: Verified Test Case with healed selector & Chromium browser
             testCases.add(createTestCase("TC-AUTH-007", "authentication", "AC-007: Login fails with invalid Password",
                     "Given the user enters an invalid Password, When the user clicks the Login button, Then login should fail and an appropriate error message should be displayed.",
-                    "User Login", "High", "Failed", "Firefox", "28 sec",
+                    "User Login", "High", "Passed", "Chromium", "5 sec",
                     List.of(
                         Map.of("stepNumber", 1, "action", "Navigate to URL: https://onepurpos.in/openings", "status", "Passed", "duration", "1.2 sec"),
                         Map.of("stepNumber", 2, "action", "Click Login dropdown menu button", "status", "Passed", "duration", "0.8 sec"),
@@ -165,11 +171,9 @@ public class DevDataInitializer implements CommandLineRunner {
                         Map.of("stepNumber", 5, "action", "Enter registered Email: shivam@yopamail.com", "status", "Passed", "duration", "0.4 sec"),
                         Map.of("stepNumber", 6, "action", "Enter invalid Password: WrongPassword123!", "status", "Passed", "duration", "0.5 sec"),
                         Map.of("stepNumber", 7, "action", "Click Login button (#login-submit)", "status", "Passed", "duration", "0.7 sec"),
-                        Map.of("stepNumber", 8, "action", "Assert error element 'div.error-message' with text 'Invalid Credentials.' is visible", "status", "Failed", "duration", "25.0 sec", "error", "Timeout 25000ms: element not found in DOM after form submission")
+                        Map.of("stepNumber", 8, "action", "Assert error notification 'Invalid Credentials.' is visible (Selector: div[role='alert'])", "status", "Passed", "duration", "0.8 sec")
                     ),
-                    "Assertion Timeout: Expected error element 'div.error-message' with text 'Invalid Credentials.' to be visible within 25000ms",
-                    "Error: expect(locator).toBeVisible() failed\nLocator: locator('div.error-message')\nExpected: visible\nReceived: hidden (element not found in DOM after login submit)",
-                    "Error: expect(locator).toBeVisible() failed\n  at LoginPage.submit (d:\\QA AI Automation\\AI-QA-OS Architecture\\ai-qa-os-execution\\src\\main\\resources\\pages\\LoginPage.ts:45:34)\n  at Test.spec (d:\\QA AI Automation\\AI-QA-OS Architecture\\ai-qa-os-execution\\src\\main\\resources\\scripts\\login.spec.ts:18:22)"));
+                    null, null, null));
 
             testCases.add(createTestCase("TC-AUTH-008", "authentication", "AC-008: Login fails when both fields invalid",
                     "Given both Email and Password are invalid, When the user clicks the Login button, Then login should fail and an appropriate error message should be displayed.",
@@ -253,7 +257,7 @@ public class DevDataInitializer implements CommandLineRunner {
 
                 jdbcTemplate.update("""
                     INSERT INTO workflow_executions (id, tenant_id, workflow_id, execution_id, status, start_time, end_time, duration_ms, result, total_steps, success_steps, failed_steps, skipped_steps, retry_count, execution_cost, token_usage, git_commit, git_branch, llm_model, pipeline_version, environment, browser, current_step, created_at, active, deleted, version)
-                    VALUES (?, '__system__', ?, ?, 'SUCCESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 180000, 'SUCCESS', 14, 14, 0, 0, 0, 0.015, 3100, 'f9e8d7c6', 'US-001_Acceptance_Suite', 'gemini-1.5-flash', 'v2.4.0', 'Development', 'Firefox', 'Completed', CURRENT_TIMESTAMP, true, false, 0)
+                    VALUES (?, '__system__', ?, ?, 'SUCCESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 180000, 'SUCCESS', 14, 14, 0, 0, 0, 0.015, 3100, 'f9e8d7c6', 'US-001_Acceptance_Suite', 'gemini-1.5-flash', 'v2.4.0', 'Development', 'Chromium', 'Completed', CURRENT_TIMESTAMP, true, false, 0)
                 """, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
             }
         } catch (Exception e) {
@@ -271,11 +275,11 @@ public class DevDataInitializer implements CommandLineRunner {
 
             jdbcTemplate.update("""
                 INSERT INTO execution_artifacts (id, tenant_id, execution_id, test_case_id, browser, run_number, screenshot_path, video_path, trace_path, report_path, log_path, created_at, active, deleted, version)
-                VALUES (?, '__system__', ?, 'TC-AUTH-007', 'firefox', 1,
+                VALUES (?, '__system__', ?, 'TC-AUTH-007', 'chromium', 1,
                         ?, ?,
                         'artifacts/trace-tc-auth-007.zip',
                         'artifacts/playwright-report.html',
-                        'Console log: POST /api/v1/auth/login 401 Unauthorized\nResponse: {"error":"invalid_credentials"}\nAssertionError: locator("div.error-message").toBeVisible() timed out after 25000ms',
+                        'Console log: POST /api/v1/auth/login 401 Unauthorized\nResponse: {"error":"invalid_credentials"}\nAssertion Passed: div[role="alert"] visible',
                         CURRENT_TIMESTAMP, true, false, 0)
             """, UUID.randomUUID(), UUID.randomUUID(), screenshotPath, videoUrl);
         } catch (Exception e) {

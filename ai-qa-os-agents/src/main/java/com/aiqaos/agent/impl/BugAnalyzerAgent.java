@@ -26,6 +26,9 @@ public class BugAnalyzerAgent implements Agent<AgentRequest, AgentResponse> {
     @Autowired
     private LLMProviderManager providerManager;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.skill.SkillInstructionService skillInstructionService;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -45,7 +48,11 @@ public class BugAnalyzerAgent implements Agent<AgentRequest, AgentResponse> {
 
             LLMRequest llmReq = new LLMRequest();
             llmReq.setPrompt(renderedPrompt);
-            llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Bug Analyzer Agent.");
+            String defaultInstruction = "You are a Senior QA Bug Analyzer Agent.";
+            String systemPrompt = (skillInstructionService != null)
+                    ? skillInstructionService.build(getType(), defaultInstruction, request.getSystemInstruction())
+                    : (request.getSystemInstruction() != null ? request.getSystemInstruction() : defaultInstruction);
+            llmReq.setSystemPrompt(systemPrompt);
             llmReq.setPurpose("BUG_ANALYSIS");
             llmReq.setAgentType("BUG_ANALYZER");
             if (request.getMetadata() != null && request.getMetadata().getCorrelationId() != null) {

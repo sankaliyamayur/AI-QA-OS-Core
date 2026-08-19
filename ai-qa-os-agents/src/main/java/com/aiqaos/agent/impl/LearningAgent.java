@@ -26,6 +26,9 @@ public class LearningAgent implements Agent<AgentRequest, AgentResponse> {
     @Autowired
     private LLMProviderManager providerManager;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.skill.SkillInstructionService skillInstructionService;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -45,9 +48,11 @@ public class LearningAgent implements Agent<AgentRequest, AgentResponse> {
 
             LLMRequest llmReq = new LLMRequest();
             llmReq.setPrompt(renderedPrompt);
-            llmReq.setSystemPrompt(request.getSystemInstruction() != null
-                    ? request.getSystemInstruction()
-                    : "You are a Senior QA Learning Engineer. Analyze QA logs and failure metrics to design healing actions.");
+            String defaultInstruction = "You are a Senior QA Learning Engineer. Analyze QA logs and failure metrics to design healing actions.";
+            String systemPrompt = (skillInstructionService != null)
+                    ? skillInstructionService.build(getType(), defaultInstruction, request.getSystemInstruction())
+                    : (request.getSystemInstruction() != null ? request.getSystemInstruction() : defaultInstruction);
+            llmReq.setSystemPrompt(systemPrompt);
             llmReq.setPurpose("LEARNING_ENGINE");
             llmReq.setAgentType("LEARNING_ENGINEER");
             if (request.getMetadata() != null && request.getMetadata().getCorrelationId() != null) {

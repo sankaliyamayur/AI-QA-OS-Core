@@ -29,6 +29,9 @@ public class ScriptGeneratorAgent implements Agent<AgentRequest, AgentResponse> 
     @Autowired(required = false)
     private com.aiqaos.agent.config.AgentPropertiesConfig agentPropertiesConfig;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.skill.SkillInstructionService skillInstructionService;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -48,7 +51,11 @@ public class ScriptGeneratorAgent implements Agent<AgentRequest, AgentResponse> 
 
             LLMRequest llmReq = new LLMRequest();
             llmReq.setPrompt(renderedPrompt);
-            llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Automation Script Generator Agent.");
+            String defaultInstruction = "You are a Senior QA Automation Script Generator Agent.";
+            String systemPrompt = (skillInstructionService != null)
+                    ? skillInstructionService.build(getType(), defaultInstruction, request.getSystemInstruction())
+                    : (request.getSystemInstruction() != null ? request.getSystemInstruction() : defaultInstruction);
+            llmReq.setSystemPrompt(systemPrompt);
             llmReq.setPurpose("SCRIPT_GENERATION");
             llmReq.setAgentType("SCRIPT_GENERATOR");
 

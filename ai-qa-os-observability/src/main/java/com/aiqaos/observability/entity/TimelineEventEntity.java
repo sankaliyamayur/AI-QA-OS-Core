@@ -15,6 +15,7 @@ public class TimelineEventEntity extends BaseEntity {
     private int sequenceNumber;
     private String eventType;
     private String stepName;
+    @jakarta.persistence.Column(length = 4000)
     private String description;
     private String status;
     private Long durationMs;

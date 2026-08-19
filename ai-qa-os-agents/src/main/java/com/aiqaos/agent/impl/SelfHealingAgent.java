@@ -27,6 +27,9 @@ public class SelfHealingAgent implements Agent<AgentRequest, AgentResponse> {
     @Autowired
     private LLMProviderManager providerManager;
 
+    @Autowired(required = false)
+    private com.aiqaos.agent.skill.SkillInstructionService skillInstructionService;
+
     private AgentStatus status = AgentStatus.IDLE;
 
     @Override
@@ -47,9 +50,11 @@ public class SelfHealingAgent implements Agent<AgentRequest, AgentResponse> {
 
             LLMRequest llmReq = new LLMRequest();
             llmReq.setPrompt(renderedPrompt);
-            llmReq.setSystemPrompt(request.getSystemInstruction() != null
-                    ? request.getSystemInstruction()
-                    : "You are a Senior QA Automation engineer. Determine self-healing steps for the failed execution.");
+            String defaultInstruction = "You are a Senior QA Automation engineer. Determine self-healing steps for the failed execution.";
+            String systemPrompt = (skillInstructionService != null)
+                    ? skillInstructionService.build(getType(), defaultInstruction, request.getSystemInstruction())
+                    : (request.getSystemInstruction() != null ? request.getSystemInstruction() : defaultInstruction);
+            llmReq.setSystemPrompt(systemPrompt);
             llmReq.setPurpose("SELF_HEALING");
             llmReq.setAgentType("SELF_HEALING_ENGINEER");
             if (request.getMetadata() != null && request.getMetadata().getCorrelationId() != null) {

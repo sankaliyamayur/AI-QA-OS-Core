@@ -10,11 +10,10 @@ spring:
   application:
     name: ai-qa-os-gateway
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_qa_os_dashboard?preferQueryMode=simple}
-    # SEC-2: credentials injected from env/secret store.
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:D:/QA AI Automation/AI-QA-OS Architecture/shared-h2db/aiqaosdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
     # SCALE-4: per-service pool sizing — the gateway fronts the workflow write path (write-leaning).
     hikari:
       pool-name: gateway-pool
@@ -25,20 +24,19 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
-    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.PostgreSQLDialect}
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
     show-sql: false
     open-in-view: false
   flyway:
-    # ORG-2: ai-qa-os-gateway is the primary owner for canonical schema migrations (V1..V15).
-    enabled: ${AIQAOS_FLYWAY_ENABLED:true}
+    enabled: ${AIQAOS_FLYWAY_ENABLED:false}
     baseline-on-migrate: true
 
 # SEC-2: JWT signing secret injected from env/secret store (no committed value).
 # Required when aiqaos.security.enabled=true; otherwise a non-persistent ephemeral key is used.
 security:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:aiqaos_default_dev_jwt_secret_key_32chars_long!}
 
 qa:
   max-tokens:
@@ -72,6 +70,10 @@ aiqaos:
           uri: http://localhost:8082
           predicates:
             - Path=/agents/**
+        - id: dashboard-service
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/dashboard/**
 
 # OBS-2: Expose Prometheus scrape endpoint at /actuator/prometheus.
 # Prometheus service is configured to scrape this every 15s (see deployment/observability/prometheus.yml).

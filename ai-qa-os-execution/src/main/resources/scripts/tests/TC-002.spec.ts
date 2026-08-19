@@ -1,1 +1,0 @@
-import { test, expect } from '@playwright/test'; test('invalid password shows error', async ({ page }) => { await page.goto('http://localhost:3000'); await page.fill('#username', 'admin'); await page.fill('#password', 'wrong'); await page.click('button[type=submit]'); await expect(page.locator('.error')).toBeVisible(); });

@@ -34,8 +34,11 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
     @Autowired
     private LLMProviderManager providerManager;
 
-    @Autowired
+    @Autowired(required = false)
     private AgentPropertiesConfig agentPropertiesConfig;
+
+    @Autowired(required = false)
+    private com.aiqaos.agent.skill.SkillInstructionService skillInstructionService;
 
     private ApplicationContext applicationContext;
 
@@ -101,7 +104,11 @@ public class QAAnalystAgent implements Agent<AgentRequest, AgentResponse>, Appli
 
                 LLMRequest llmReq = new LLMRequest();
                 llmReq.setPrompt(renderedPrompt);
-                llmReq.setSystemPrompt(request.getSystemInstruction() != null ? request.getSystemInstruction() : "You are a Senior QA Analyst Agent.");
+                String defaultInstruction = "You are a Senior QA Analyst Agent.";
+                String systemPrompt = (skillInstructionService != null)
+                        ? skillInstructionService.build(getType(), defaultInstruction, request.getSystemInstruction())
+                        : (request.getSystemInstruction() != null ? request.getSystemInstruction() : defaultInstruction);
+                llmReq.setSystemPrompt(systemPrompt);
                 llmReq.setPurpose("QA_ANALYSIS");
                 llmReq.setAgentType("QA_ENGINEER");
                 int tokenBudget = 4096;
